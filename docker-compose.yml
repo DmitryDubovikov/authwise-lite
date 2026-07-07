@@ -1,0 +1,17 @@
+# Slim-стек: только MLflow + sqlite (перенос triagewise-lite). Граница исполнения: контейнеры
+# никогда не ходят в OpenAI — весь LLM-egress только с хоста (docs/tech-decisions.md).
+# Порт 5051: на macOS AirPlay занимает 5000, 5050 — MLflow сиблинга triagewise-lite.
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.4.0 # пин ≥3.4 — Evaluation Datasets (golden-сет, iter 1)
+    ports:
+      - "5051:5000"
+    volumes:
+      - ./mlflow-data:/mlflow
+    # --serve-artifacts: артефакты отдаются по HTTP, без host/container path-mismatch
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --host 0.0.0.0 --port 5000

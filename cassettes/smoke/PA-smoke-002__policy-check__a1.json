@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"missing_info\",\"missing\":[\"Recent HbA1c lab results\"],\"rationale\":\"GLP-1 coverage requires a current HbA1c value.\"}",
+    "usage": {
+      "completion_tokens": 41,
+      "prompt_tokens": 268,
+      "total_tokens": 309
+    }
+  }
+}

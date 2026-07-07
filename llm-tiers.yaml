@@ -1,0 +1,17 @@
+# Тиры моделей (перенос triagewise-lite, решено 2026-07-06). Ноды графа по умолчанию на cheap.
+# Пин-гейт: имя модели обязано матчить -YYYY-MM-DD$ (app/llm/tiers.py), плавающие алиасы — ошибка.
+# Цены — USD за 1M токенов (сквозной контракт №5: cost ноды = usage × цена, одна функция в
+# domain, потребители — iter 3–4); актуализировать при смене снапшота.
+tiers:
+  cheap:
+    model: gpt-4.1-nano-2025-04-14
+    input_per_1m: 0.10
+    output_per_1m: 0.40
+  mid:
+    model: gpt-4o-mini-2024-07-18
+    input_per_1m: 0.15
+    output_per_1m: 0.60
+  smart:
+    model: gpt-4.1-2025-04-14
+    input_per_1m: 2.00
+    output_per_1m: 8.00

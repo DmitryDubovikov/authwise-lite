@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"sufficient\",\"missing\":[],\"rationale\":\"HbA1c 8.1% supports medical necessity for GLP-1 therapy.\"}",
+    "usage": {
+      "completion_tokens": 35,
+      "prompt_tokens": 297,
+      "total_tokens": 332
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"missing_info\",\"missing\":[\"Physician order for home oxygen\"],\"rationale\":\"SpO2 94% at rest does not qualify; physician order still absent.\"}",
+    "usage": {
+      "completion_tokens": 45,
+      "prompt_tokens": 283,
+      "total_tokens": 328
+    }
+  }
+}

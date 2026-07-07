@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"sufficient\",\"missing\":[],\"rationale\":\"Order, conservative therapy and neuro exam meet MRI criteria.\"}",
+    "usage": {
+      "completion_tokens": 38,
+      "prompt_tokens": 291,
+      "total_tokens": 329
+    }
+  }
+}

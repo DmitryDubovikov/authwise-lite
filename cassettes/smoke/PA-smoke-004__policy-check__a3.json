@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"missing_info\",\"missing\":[\"Physician order for home oxygen\"],\"rationale\":\"Progress note received, but the physician order is still absent.\"}",
+    "usage": {
+      "completion_tokens": 44,
+      "prompt_tokens": 309,
+      "total_tokens": 353
+    }
+  }
+}

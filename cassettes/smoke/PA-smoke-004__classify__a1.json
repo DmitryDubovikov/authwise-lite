@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"case_type\":\"dme\",\"urgency\":\"routine\"}",
+    "usage": {
+      "completion_tokens": 13,
+      "prompt_tokens": 143,
+      "total_tokens": 156
+    }
+  }
+}

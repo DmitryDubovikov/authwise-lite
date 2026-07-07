@@ -1,0 +1,19 @@
+# Actions-скелет iter 0: пока гоняет только make check (offline, replay, без секретов).
+# CI path-assertion gate добавится в iter 2.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --extra dev
+      - run: make check
+        env:
+          UV_NO_SYNC: "1"
