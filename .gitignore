@@ -7,4 +7,5 @@ __pycache__/
 .mypy_cache/
 mlflow-data/
 logs/
+runs/
 .DS_Store

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     tiers_path: Path = _ROOT / "llm-tiers.yaml"
     cassettes_dir: Path = _ROOT / "cassettes"
     fixtures_dir: Path = _ROOT / "fixtures"
+    runs_dir: Path = _ROOT / "runs"  # JSONL-артефакты батч-прогонов (контракт №3), gitignored
     # 5051: 5050 занят MLflow сиблинга triagewise-lite (см. docker-compose.yml)
     mlflow_tracking_uri: str = "http://localhost:5051"
 

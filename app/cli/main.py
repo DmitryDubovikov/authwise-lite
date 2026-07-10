@@ -4,15 +4,10 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from app.config import Settings, get_settings
+from app.config import get_settings
 from app.domain.path import render_path
-from app.domain.schemas import PARequest
 from app.workflow.fixtures import load_requests
-from app.workflow.graph import PARunResult, run_pa_request
-
-
-async def _run_all(requests: list[PARequest], settings: Settings) -> list[PARunResult]:
-    return await asyncio.gather(*(run_pa_request(r, settings=settings) for r in requests))
+from app.workflow.runner import run_batch
 
 
 def main() -> None:
@@ -30,9 +25,9 @@ def main() -> None:
         requests = [r for r in requests if r.id == args.request_id]
         if not requests:
             raise SystemExit(f"заявка {args.request_id!r} не найдена в {args.fixture}")
-    results = asyncio.run(_run_all(requests, settings))
-    for request, result in zip(requests, results, strict=True):
-        print(f"{request.id}: {render_path(result.trace)}")
+    records = asyncio.run(run_batch(requests, settings=settings))
+    for record in records:
+        print(f"{record.request_id}: {render_path(record.trace)}")
 
 
 if __name__ == "__main__":

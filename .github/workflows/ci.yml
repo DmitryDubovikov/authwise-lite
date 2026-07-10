@@ -1,5 +1,7 @@
-# Actions-скелет iter 0: пока гоняет только make check (offline, replay, без секретов).
-# CI path-assertion gate добавится в iter 2.
+# CI-гейт (offline, replay, без секретов). make check включает path-assertion gate
+# (tests/test_path_gate.py) — регрессия маршрутизации краснит джоб. Шаг path-gate печатает
+# таблицу «ожидаемый vs фактический путь» в лог (витрина). Branch protection на main требует
+# контекст `check` — тогда красный гейт блокирует мёрдж (включается отдельно, ceremony финала).
 name: ci
 
 on:
@@ -15,5 +17,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --extra dev
       - run: make check
+        env:
+          UV_NO_SYNC: "1"
+      - run: make path-gate  # таблица ожид vs факт по базовой пачке (replay, $0)
         env:
           UV_NO_SYNC: "1"

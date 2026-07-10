@@ -1,4 +1,4 @@
-.PHONY: check test fmt smoke author-cassettes up down record-base replay-base golden-upload golden-verify
+.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down record-base replay-base golden-upload golden-verify
 
 check: ## линт + формат + типы + тесты (всё offline, replay)
 	uv run ruff check .
@@ -18,6 +18,15 @@ smoke: ## прогон smoke-фикстуры через граф (replay, $$0),
 
 author-cassettes: ## перегенерить авторские кассеты smoke-набора ($$0, идемпотентно)
 	uv run python -m scripts.author_smoke_cassettes
+
+author-broken-cassettes: ## перегенерить authored subset base-broken-policy ($$0, идемпотентно)
+	uv run python -m scripts.author_broken_cassettes
+
+path-gate: ## path-assertion gate по базовой пачке (replay, $$0): таблица ожид vs факт, exit≠0 при регрессии
+	AW_CASSETTE_SET=base uv run python -m scripts.path_gate
+
+path-gate-broken: ## демо-регрессия: сломанный policy-check на subset → гейт краснеет (смена маршрута, не cassette-miss)
+	AW_CASSETTE_SET=base-broken-policy uv run python -m scripts.path_gate --ids PA-base-001,PA-base-003,PA-base-015,PA-base-019,PA-base-021
 
 record-base: ## записать кассеты базовой пачки (ДЕНЬГИ ≈$$0.01, только по явной просьбе — правило 4)
 	AW_LLM_MODE=record AW_CASSETTE_SET=base uv run python -m app.cli fixtures/requests-base.jsonl

@@ -1,0 +1,11 @@
+{
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\":\"sufficient\",\"missing\":[],\"rationale\":\"Documentation appears adequate.\"}",
+    "usage": {
+      "completion_tokens": 20,
+      "prompt_tokens": 270,
+      "total_tokens": 290
+    }
+  }
+}
