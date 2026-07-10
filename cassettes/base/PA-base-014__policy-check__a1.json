@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are a policy reviewer for Northfield Health prior-authorization (PA) requests.\nCheck the request against coverage policy and documentation requirements.\nReturn ONLY a JSON object, no prose:\n{\"status\": \"sufficient\" | \"missing_info\" | \"out_of_policy\",\n \"missing\": [\"<required document>\", ...],\n \"rationale\": \"<one sentence>\"}\n\n- \"sufficient\": documentation supports approval.\n- \"missing_info\": specific required documents are absent — list them in \"missing\".\n- \"out_of_policy\": the service is excluded from coverage (e.g. cosmetic, experimental).\n\nCase type: medication (urgency: routine)\nPA request:\nPA request for semaglutide (Ozempic) 0.5 mg weekly for member NH-146092 with type 2 diabetes. Attached: physician order, diagnosis confirmation, HbA1c 8.4% drawn 2026-06-20, documentation of metformin intolerance.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\": \"sufficient\", \"missing\": [], \"rationale\": \"The request includes all necessary documentation supporting medical necessity for semaglutide in type 2 diabetes.\"}",
+    "usage": {
+      "completion_tokens": 37,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 201,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 238
+    }
+  }
+}

@@ -6,10 +6,12 @@ fixture; **path-level measurement is the product** — trajectory golden-set, CI
 gates, per-node cost/latency SLO, and path-distribution drift monitoring. See `CLAUDE.md`
 (constitution) and `ROADMAP.md` (iteration backbone).
 
-> **Status: iteration 0 closed** — the branching graph with a real branch-point and retry-loop
-> is in place, runs offline ($0, replay cassettes) and returns its path as a typed value
-> (`PathTrace`). The quickstart heading names the last iteration it actually covers, as in the
-> sibling projects.
+> **Status: iteration 1 closed** — the trajectory golden-set (30 marked-up PA requests, allowed
+> paths as `(branch, retry_cycles)`) now lives in MLflow as a versioned Evaluation Dataset, not a
+> file in the logs. `make golden-upload` lands it idempotently; `make golden-verify` reads it back
+> from the store and prints each request's expected path. The graph from iter 0 still runs offline
+> ($0, replay cassettes) and returns its path as a typed value (`PathTrace`). The quickstart
+> heading names the last iteration it actually covers, as in the sibling projects.
 
 ## The object of measurement
 
@@ -37,7 +39,7 @@ reuses their stack wholesale — the branching-graph pattern, LiteLLM, and casse
 a multi-step agent, not just the answer it gives**. The single deliberate exception is
 Prometheus/Grafana, introduced for per-node SLO alerting and runtime budget controls.
 
-## Quickstart (after iter 0 — branching-graph skeleton)
+## Quickstart (after iter 1 — trajectory golden-set in the registry)
 
 ```bash
 uv sync --extra dev
@@ -52,13 +54,17 @@ make smoke
 uv run python -m app.cli fixtures/requests-smoke.jsonl --id PA-smoke-002
 
 make check                      # ruff + format + mypy + pytest (static gate, no LLM)
-make up                         # control-plane backend (MLflow) at localhost:5051 — empty until iter 1
+make up                         # control-plane backend (MLflow) at localhost:5051
+
+# Trajectory golden-set → MLflow Evaluation Dataset (offline/$0, no LLM):
+make golden-upload              # land the golden-set (idempotent — get-or-create + merge)
+make golden-verify              # read it back FROM the store, print each request's expected path
 make down                       # stop MLflow
 ```
 
 Make targets: `make check` (lint+types+tests), `make smoke` (run the smoke fixture),
-`make up`/`make down` (MLflow), `make author-cassettes` (regenerate the $0 smoke cassettes),
-`make test`, `make fmt`.
+`make up`/`make down` (MLflow), `make golden-upload`/`make golden-verify` (trajectory golden-set
+in MLflow), `make author-cassettes` (regenerate the $0 smoke cassettes), `make test`, `make fmt`.
 
 `AW_LLM_MODE` is `replay` by default (reads committed cassettes, never the network).
 `record`/`live` hit the provider and cost money — gated by an explicit go, as in the sibling

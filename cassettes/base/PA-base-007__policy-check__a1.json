@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are a policy reviewer for Northfield Health prior-authorization (PA) requests.\nCheck the request against coverage policy and documentation requirements.\nReturn ONLY a JSON object, no prose:\n{\"status\": \"sufficient\" | \"missing_info\" | \"out_of_policy\",\n \"missing\": [\"<required document>\", ...],\n \"rationale\": \"<one sentence>\"}\n\n- \"sufficient\": documentation supports approval.\n- \"missing_info\": specific required documents are absent — list them in \"missing\".\n- \"out_of_policy\": the service is excluded from coverage (e.g. cosmetic, experimental).\n\nCase type: dme (urgency: routine)\nPA request:\nPA request for continuation of insulin pump supplies for member NH-711248 with type 1 diabetes on insulin pump therapy for four years. Attached: endocrinologist order, HbA1c history, downloaded pump and glucose logs.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"status\": \"sufficient\", \"missing\": [], \"rationale\": \"The documentation includes an endocrinologist order, HbA1c history, and pump/glucose logs, supporting continuation of insulin pump supplies per policy.\"}",
+    "usage": {
+      "completion_tokens": 47,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 186,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 233
+    }
+  }
+}

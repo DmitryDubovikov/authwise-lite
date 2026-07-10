@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are an intake classifier for Northfield Health prior-authorization (PA) requests.\nClassify the request below. Return ONLY a JSON object, no prose:\n{\"case_type\": \"imaging\" | \"medication\" | \"dme\" | \"procedure\" | \"other\",\n \"urgency\": \"routine\" | \"urgent\"}\n\nPA request:\nPA request for a continuous glucose monitor for member NH-305178 with type 2 diabetes on basal insulin only. Attached: physician order and HbA1c 8.9%. Self-monitoring glucose logs are not attached.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\"case_type\": \"medication\", \"urgency\": \"routine\"}",
+    "usage": {
+      "completion_tokens": 15,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 125,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 140
+    }
+  }
+}

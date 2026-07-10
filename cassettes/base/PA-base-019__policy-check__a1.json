@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are a policy reviewer for Northfield Health prior-authorization (PA) requests.\nCheck the request against coverage policy and documentation requirements.\nReturn ONLY a JSON object, no prose:\n{\"status\": \"sufficient\" | \"missing_info\" | \"out_of_policy\",\n \"missing\": [\"<required document>\", ...],\n \"rationale\": \"<one sentence>\"}\n\n- \"sufficient\": documentation supports approval.\n- \"missing_info\": specific required documents are absent — list them in \"missing\".\n- \"out_of_policy\": the service is excluded from coverage (e.g. cosmetic, experimental).\n\nCase type: dme (urgency: routine)\nPA request:\nPA request for a Group 2 power wheelchair for member NH-195023 with multiple sclerosis and severe lower-extremity weakness. Attached: physician order only; the specialty mobility evaluation and the home accessibility assessment are not included.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\n  \"status\": \"missing_info\",\n  \"missing\": [\"specialty mobility evaluation\", \"home accessibility assessment\"],\n  \"rationale\": \"The request lacks the required specialty mobility evaluation and home accessibility assessment documentation to support the need for a Group 2 power wheelchair.\"\n}",
+    "usage": {
+      "completion_tokens": 56,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 185,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 241
+    }
+  }
+}
