@@ -24,7 +24,7 @@ import shutil
 from app.config import get_settings
 from app.domain.schemas import PolicyCheckResult
 from app.llm import cassettes
-from app.llm.tiers import resolve_model
+from app.llm.tiers import resolve_tier
 
 BROKEN_SET = "base-broken-policy"
 # заявки subset (ids определяют, для чего гейт краснеет/остаётся зелёным — импортируются тестом)
@@ -48,7 +48,7 @@ def _sufficient() -> str:
 
 def main() -> None:
     settings = get_settings()
-    model = resolve_model("cheap", settings.tiers_path)  # тот же тир/снапшот, что в base
+    model = resolve_tier("cheap", settings.tiers_path).model  # тот же тир/снапшот, что в base
     for request_id in SUBSET:
         # classify не затронут поломкой policy-check → копируем из base как есть
         src = cassettes.cassette_path(settings.cassettes_dir, "base", request_id, "classify", 1)

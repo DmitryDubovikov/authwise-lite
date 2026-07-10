@@ -6,14 +6,18 @@ fixture; **path-level measurement is the product** — trajectory golden-set, CI
 gates, per-node cost/latency SLO, and path-distribution drift monitoring. See `CLAUDE.md`
 (constitution) and `ROADMAP.md` (iteration backbone).
 
-> **Status: iteration 2 closed** — a **CI path-assertion gate** now runs the graph over the golden
-> pack (30 requests, replay/$0) and asserts each request's *route* — branch + retry-cycle count, not
-> the answer text. It ships inside `make check` (so CI runs it), and `make path-gate` prints the
-> "expected vs actual path" table. A deliberately broken policy-check cassette set
-> (`make path-gate-broken`) turns the gate **red on a route change** — not a cassette-miss — proving
-> it catches routing regressions. Iter 1's trajectory golden-set still lives in MLflow as a versioned
-> Evaluation Dataset (`make golden-upload`/`make golden-verify`). The quickstart heading names the
-> last iteration it actually covers, as in the sibling projects.
+> **Status: iteration 3 closed** — **per-node cost/latency attribution**. Every request run is now a
+> Langfuse trace whose spans are named after graph nodes (`classify`, `policy-check`, `decide`), with
+> a per-node *generation* carrying the model, token usage, and our own USD cost from `llm-tiers.yaml`
+> — so spend is attributed to the step of the agent, not the run as a whole (a retry-loop fires
+> `policy-check` three times, and it shows). Wired through the LangGraph `CallbackHandler`, which
+> enables Langfuse's **Agent Graph** view. Tracing is opt-in: only when both `AW_LANGFUSE_*` keys are
+> set — by default (tests, CI, plain replay) it's a pure no-op and `langfuse` isn't even imported.
+> `make obs-up` brings up the Langfuse stack, `make trace-base` replays the base pack into it ($0),
+> and `make langfuse-verify` proves the attribution *from the store* (Langfuse API, not a UI screen).
+> Iter 2's CI path-assertion gate (`make path-gate`) and iter 1's golden-set in MLflow
+> (`make golden-upload`/`make golden-verify`) still stand. The quickstart heading names the last
+> iteration it actually covers, as in the sibling projects.
 
 ## The object of measurement
 
@@ -41,7 +45,7 @@ reuses their stack wholesale — the branching-graph pattern, LiteLLM, and casse
 a multi-step agent, not just the answer it gives**. The single deliberate exception is
 Prometheus/Grafana, introduced for per-node SLO alerting and runtime budget controls.
 
-## Quickstart (after iter 2 — CI path-assertion gate)
+## Quickstart (after iter 3 — per-node cost/latency attribution)
 
 ```bash
 uv sync --extra dev
@@ -67,13 +71,21 @@ make up                         # control-plane backend (MLflow) at localhost:50
 make golden-upload              # land the golden-set (idempotent — get-or-create + merge)
 make golden-verify              # read it back FROM the store, print each request's expected path
 make down                       # stop MLflow
+
+# Per-node cost/latency attribution (Langfuse) — replay/$0, tracing opt-in via keys:
+make obs-up                     # bring up the Langfuse stack (profile obs); UI at localhost:3001
+make trace-base                 # replay the base pack WITH tracing → per-node spans in Langfuse
+make langfuse-verify            # verify FROM the store: spans named by node, generation carries usage+cost
+make down                       # stop everything (incl. the obs profile)
 ```
 
 Make targets: `make check` (lint+types+tests, includes the path-gate), `make smoke` (run the smoke
 fixture), `make path-gate`/`make path-gate-broken` (trajectory regression gate — green base pack /
-red route-change demo), `make up`/`make down` (MLflow), `make golden-upload`/`make golden-verify`
-(trajectory golden-set in MLflow), `make author-cassettes`/`make author-broken-cassettes`
-(regenerate the $0 cassettes), `make test`, `make fmt`.
+red route-change demo), `make up`/`make down` (MLflow / everything), `make golden-upload`/`make
+golden-verify` (trajectory golden-set in MLflow), `make obs-up` + `make trace-base` +
+`make langfuse-verify` (per-node cost/latency attribution in Langfuse),
+`make author-cassettes`/`make author-broken-cassettes` (regenerate the $0 cassettes), `make test`,
+`make fmt`.
 
 `AW_LLM_MODE` is `replay` by default (reads committed cassettes, never the network).
 `record`/`live` hit the provider and cost money — gated by an explicit go, as in the sibling

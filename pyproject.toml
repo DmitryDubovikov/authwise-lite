@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Trajectory-eval control plane над многошаговым PA-агентом (fixture: Northfield Health)"
 requires-python = ">=3.11"
 dependencies = [
+    "langchain>=1,<2",
+    "langfuse>=3,<4",
     "langgraph>=1,<2",
     "litellm>=1.55,<2",
     "mlflow>=3.4,<4",

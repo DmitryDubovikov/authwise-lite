@@ -1,4 +1,7 @@
-.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down record-base replay-base golden-upload golden-verify
+.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up record-base replay-base trace-base golden-upload golden-verify langfuse-verify
+
+# pk-aw/sk-aw — детерминированный dev-сид Langfuse (LANGFUSE_INIT_* в docker-compose.yml), не секрет
+LANGFUSE_KEYS = AW_LANGFUSE_PUBLIC_KEY=pk-aw AW_LANGFUSE_SECRET_KEY=sk-aw
 
 check: ## линт + формат + типы + тесты (всё offline, replay)
 	uv run ruff check .
@@ -34,6 +37,12 @@ record-base: ## записать кассеты базовой пачки (ДЕ�
 replay-base: ## прогон базовой пачки по кассетам (replay, $$0), печатает пути
 	AW_CASSETTE_SET=base uv run python -m app.cli fixtures/requests-base.jsonl
 
+trace-base: ## replay базовой пачки с трейсингом в Langfuse ($$0; требует obs-up)
+	AW_CASSETTE_SET=base $(LANGFUSE_KEYS) uv run python -m app.cli fixtures/requests-base.jsonl
+
+langfuse-verify: ## verify the store (правило 9): per-node спаны + usage/cost запросом к Langfuse API
+	$(LANGFUSE_KEYS) uv run python -m scripts.langfuse_verify
+
 golden-upload: ## залить trajectory golden-сет в MLflow Evaluation Dataset (идемпотентно)
 	uv run python -m scripts.golden_upload
 
@@ -43,5 +52,8 @@ golden-verify: ## verify в сторе (правило 9): записи + кво
 up: ## поднять MLflow (sqlite-бэкенд)
 	docker compose up -d mlflow
 
-down:
-	docker compose down
+obs-up: ## поднять Langfuse-стек (профиль obs); UI http://localhost:3001 (dev@authwise.lite / lite-password)
+	docker compose --profile obs up -d
+
+down: ## погасить всё, включая obs-профиль (трейсы/дашборды переживают в named volumes)
+	docker compose --profile obs down

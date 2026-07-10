@@ -19,4 +19,6 @@ def replay_settings(cassette_set: str) -> Settings:
         cassettes_dir=ROOT / "cassettes",
         tiers_path=ROOT / "llm-tiers.yaml",
         fixtures_dir=ROOT / "fixtures",
+        langfuse_public_key=None,  # трейсинг в тестах всегда no-op, даже с ключами в .env
+        langfuse_secret_key=None,
     )

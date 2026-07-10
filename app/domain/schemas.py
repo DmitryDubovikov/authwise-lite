@@ -1,5 +1,7 @@
-"""Схемы domain-слоя: заявка-фикстура и структурированные выходы LLM-нод. Без I/O."""
+"""Схемы domain-слоя: заявка-фикстура, структурированные выходы LLM-нод и per-node
+статистика LLM-вызова (контракт №3). Без I/O."""
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -31,6 +33,16 @@ class PolicyCheckResult(BaseModel):
     status: Literal["sufficient", "missing_info", "out_of_policy"]
     missing: list[str] = Field(default_factory=list)
     rationale: str = ""
+
+
+@dataclass(frozen=True)
+class NodeStat:
+    """Per-node usage/latency LLM-вызова (контракт №3): наблюдаемость, в golden/CI не ассертится."""
+
+    node: str
+    attempt: int
+    usage: dict[str, Any] | None
+    latency_ms: float
 
 
 def json_object(raw: str) -> str:

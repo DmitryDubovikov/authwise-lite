@@ -29,8 +29,8 @@ def load_tiers(path: Path) -> dict[str, Tier]:
     return tiers
 
 
-def resolve_model(tier: str, tiers_path: Path) -> str:
+def resolve_tier(tier: str, tiers_path: Path) -> Tier:
     tiers = load_tiers(tiers_path)
     if tier not in tiers:
         raise KeyError(f"неизвестный тир {tier!r}; доступны: {sorted(tiers)}")
-    return tiers[tier].model
+    return tiers[tier]

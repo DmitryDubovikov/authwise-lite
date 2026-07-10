@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_base_url: str | None = None
 
+    # Langfuse (iter 3): трейсинг включается только когда заданы ОБА ключа; дефолт — выключен
+    # (тесты/CI живут без сервера). 3001: 3000 занят Langfuse сиблинга policywise-lite.
+    langfuse_host: str = "http://localhost:3001"
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: SecretStr | None = None
+
     tiers_path: Path = _ROOT / "llm-tiers.yaml"
     cassettes_dir: Path = _ROOT / "cassettes"
     fixtures_dir: Path = _ROOT / "fixtures"

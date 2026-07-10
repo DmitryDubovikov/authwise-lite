@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from conftest import ROOT
 
-from app.llm.tiers import load_tiers, resolve_model
+from app.llm.tiers import load_tiers, resolve_tier
 
 
 def test_project_tiers_pass_pin_gate() -> None:
@@ -26,4 +26,4 @@ def test_floating_alias_rejected(tmp_path: Path) -> None:
 
 def test_unknown_tier_rejected() -> None:
     with pytest.raises(KeyError, match="неизвестный тир"):
-        resolve_model("free", ROOT / "llm-tiers.yaml")
+        resolve_tier("free", ROOT / "llm-tiers.yaml")

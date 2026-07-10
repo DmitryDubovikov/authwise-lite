@@ -14,7 +14,7 @@
 from app.config import get_settings
 from app.domain.schemas import Classification, PolicyCheckResult
 from app.llm import cassettes
-from app.llm.tiers import resolve_model
+from app.llm.tiers import resolve_tier
 
 
 def _classify(case_type: str) -> str:
@@ -106,7 +106,7 @@ CASSETTES: dict[tuple[str, str, int], tuple[str, dict[str, int]]] = {
 
 def main() -> None:
     settings = get_settings()
-    model = resolve_model("cheap", settings.tiers_path)
+    model = resolve_tier("cheap", settings.tiers_path).model
     for (request_id, node, attempt), (content, usage) in CASSETTES.items():
         path = cassettes.cassette_path(settings.cassettes_dir, "smoke", request_id, node, attempt)
         cassettes.save(path, model=model, content=content, usage=usage)

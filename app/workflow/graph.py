@@ -19,11 +19,13 @@ from app.domain.decide import Decision, decide
 from app.domain.path import PathTrace
 from app.domain.schemas import (
     Classification,
+    NodeStat,
     PARequest,
     PolicyCheckResult,
     parse_classification,
     parse_policy_check,
 )
+from app.llm import tracing
 from app.llm.router import route
 from app.workflow.prompts import classify_messages, policy_check_messages
 
@@ -34,6 +36,7 @@ class PAState(TypedDict):
     supplemental: list[str]  # что заявитель может дослать (фикстура, по одному за цикл)
     received: Annotated[list[str], operator.add]  # что уже дослал по request-info
     nodes: Annotated[list[str], operator.add]  # посещённые ноды → PathTrace.nodes
+    node_stats: Annotated[list[NodeStat], operator.add]  # → RunRecord (контракт №3)
     classification: NotRequired[Classification]
     policy: NotRequired[PolicyCheckResult]
     retry_cycles: NotRequired[int]
@@ -54,7 +57,13 @@ async def classify(state: PAState, config: RunnableConfig) -> dict[str, object]:
         attempt=1,
         settings=settings,
     )
-    return {"classification": parse_classification(reply.content), "nodes": ["classify"]}
+    return {
+        "classification": parse_classification(reply.content),
+        "nodes": ["classify"],
+        "node_stats": [
+            NodeStat(node="classify", attempt=1, usage=reply.usage, latency_ms=reply.latency_ms)
+        ],
+    }
 
 
 async def policy_check(state: PAState, config: RunnableConfig) -> dict[str, object]:
@@ -69,7 +78,15 @@ async def policy_check(state: PAState, config: RunnableConfig) -> dict[str, obje
         attempt=attempt,
         settings=settings,
     )
-    return {"policy": parse_policy_check(reply.content), "nodes": ["policy-check"]}
+    return {
+        "policy": parse_policy_check(reply.content),
+        "nodes": ["policy-check"],
+        "node_stats": [
+            NodeStat(
+                node="policy-check", attempt=attempt, usage=reply.usage, latency_ms=reply.latency_ms
+            )
+        ],
+    }
 
 
 def decide_node(state: PAState, config: RunnableConfig) -> dict[str, object]:
@@ -119,10 +136,15 @@ _GRAPH = build_pa_graph().compile()  # структура статична → �
 class PARunResult:
     trace: PathTrace  # источник истины golden/CI-ассертов (правило 6)
     policy: PolicyCheckResult  # финальный вердикт policy-check («ответ» приложения-фикстуры)
+    node_stats: tuple[NodeStat, ...]  # per-node usage/latency (контракт №3)
 
 
 async def run_pa_request(request: PARequest, *, settings: Settings) -> PARunResult:
     """Boundary workflow-слоя: одна заявка через граф → ответ + PathTrace."""
+    config: RunnableConfig = {"configurable": {"settings": settings}}
+    handler = tracing.langgraph_handler(settings)  # None — трейсинг выключен (дефолт)
+    if handler is not None:
+        config["callbacks"] = [handler]
     final = cast(
         PAState,
         await _GRAPH.ainvoke(
@@ -132,8 +154,9 @@ async def run_pa_request(request: PARequest, *, settings: Settings) -> PARunResu
                 "supplemental": request.supplemental,
                 "received": [],
                 "nodes": [],
+                "node_stats": [],
             },
-            config={"configurable": {"settings": settings}},
+            config=config,
         ),
     )
     decision = final["decision"]
@@ -144,4 +167,4 @@ async def run_pa_request(request: PARequest, *, settings: Settings) -> PARunResu
         retry_cycles=final.get("retry_cycles", 0),
         nodes=tuple(final["nodes"]),
     )
-    return PARunResult(trace=trace, policy=final["policy"])
+    return PARunResult(trace=trace, policy=final["policy"], node_stats=tuple(final["node_stats"]))

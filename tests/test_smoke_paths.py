@@ -39,3 +39,17 @@ def test_retry_loop_revisits_policy_check(results: dict[str, RunRecord]) -> None
     trace = results["PA-smoke-004"].trace
     assert trace.nodes.count("policy-check") == trace.retry_cycles + 1
     assert trace.nodes.count("request-info") == trace.retry_cycles
+
+
+def test_node_stats_attribute_every_llm_call(results: dict[str, RunRecord]) -> None:
+    # контракт №3: per-node usage/latency — по записи на каждый LLM-вызов, в порядке пути
+    stats = results["PA-smoke-004"].node_stats
+    assert [(s.node, s.attempt) for s in stats] == [
+        ("classify", 1),
+        ("policy-check", 1),
+        ("policy-check", 2),
+        ("policy-check", 3),
+    ]
+    for stat in stats:
+        assert stat.usage is not None and stat.usage["total_tokens"] > 0  # из кассеты
+        assert stat.latency_ms >= 0
