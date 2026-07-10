@@ -7,7 +7,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.domain.path import render_path
 from app.workflow.fixtures import load_requests
-from app.workflow.runner import run_batch
+from app.workflow.runner import records_path, run_batch, write_records
 
 
 def main() -> None:
@@ -26,8 +26,13 @@ def main() -> None:
         if not requests:
             raise SystemExit(f"заявка {args.request_id!r} не найдена в {args.fixture}")
     records = asyncio.run(run_batch(requests, settings=settings))
+    if args.request_id is None:
+        # RunRecord JSONL (контракт №3) — только полный прогон: дебаг одной заявки через --id
+        # не должен молча затирать батч-артефакт, который читают metrics-push и Phoenix
+        write_records(records, records_path(settings))
     for record in records:
-        print(f"{record.request_id}: {render_path(record.trace)}")
+        marker = "  [budget]" if record.budget_escalated else ""
+        print(f"{record.request_id}: {render_path(record.trace)}{marker}")
 
 
 if __name__ == "__main__":

@@ -6,18 +6,21 @@ fixture; **path-level measurement is the product** — trajectory golden-set, CI
 gates, per-node cost/latency SLO, and path-distribution drift monitoring. See `CLAUDE.md`
 (constitution) and `ROADMAP.md` (iteration backbone).
 
-> **Status: iteration 3 closed** — **per-node cost/latency attribution**. Every request run is now a
-> Langfuse trace whose spans are named after graph nodes (`classify`, `policy-check`, `decide`), with
-> a per-node *generation* carrying the model, token usage, and our own USD cost from `llm-tiers.yaml`
-> — so spend is attributed to the step of the agent, not the run as a whole (a retry-loop fires
-> `policy-check` three times, and it shows). Wired through the LangGraph `CallbackHandler`, which
-> enables Langfuse's **Agent Graph** view. Tracing is opt-in: only when both `AW_LANGFUSE_*` keys are
-> set — by default (tests, CI, plain replay) it's a pure no-op and `langfuse` isn't even imported.
-> `make obs-up` brings up the Langfuse stack, `make trace-base` replays the base pack into it ($0),
-> and `make langfuse-verify` proves the attribution *from the store* (Langfuse API, not a UI screen).
-> Iter 2's CI path-assertion gate (`make path-gate`) and iter 1's golden-set in MLflow
-> (`make golden-upload`/`make golden-verify`) still stand. The quickstart heading names the last
-> iteration it actually covers, as in the sibling projects.
+> **Status: iteration 4 closed** — **agent FinOps guardrails: per-node SLO alerting + runtime budget
+> controls**. Two guardrails turn iter 3's measurement into enforcement. (1) **Runtime budget
+> controls**: each run has a USD budget (`AW_RUN_BUDGET_USD`), and the retry-loop continues only while
+> the budget is positive — exhaustion routes the request to `escalate` (a human is cheaper than
+> another LLM cycle), so budget exhaustion is a **route** visible in the trajectory, not an exception.
+> The default budget leaves golden paths unchanged; `make budget-demo` squeezes it via env and the
+> retry-loop tips into `escalate  [budget]`. (2) **Per-node SLO alerting**: per-node latency/cost and a
+> budget-escalation counter are pushed to Prometheus (via Pushgateway — the batch is short-lived),
+> and a provisioned Grafana alert rule **names the node** that breaches the latency SLO. This is the
+> project's single new tool (Prometheus + Grafana). `make slo-up` brings the stack up, `make
+> metrics-push` lands the metrics ($0, from the RunRecord), and `make slo-verify` proves it *from the
+> store* (Prometheus + Grafana APIs, not a UI screen). Iter 3's Langfuse attribution
+> (`make trace-base`/`make langfuse-verify`), iter 2's CI path-assertion gate (`make path-gate`), and
+> iter 1's golden-set in MLflow (`make golden-upload`/`make golden-verify`) still stand. The quickstart
+> heading names the last iteration it actually covers, as in the sibling projects.
 
 ## The object of measurement
 
@@ -45,7 +48,7 @@ reuses their stack wholesale — the branching-graph pattern, LiteLLM, and casse
 a multi-step agent, not just the answer it gives**. The single deliberate exception is
 Prometheus/Grafana, introduced for per-node SLO alerting and runtime budget controls.
 
-## Quickstart (after iter 3 — per-node cost/latency attribution)
+## Quickstart (after iter 4 — agent FinOps guardrails: per-node SLO alerting + runtime budget controls)
 
 ```bash
 uv sync --extra dev
@@ -77,13 +80,26 @@ make obs-up                     # bring up the Langfuse stack (profile obs); UI 
 make trace-base                 # replay the base pack WITH tracing → per-node spans in Langfuse
 make langfuse-verify            # verify FROM the store: spans named by node, generation carries usage+cost
 make down                       # stop everything (incl. the obs profile)
+
+# Agent FinOps guardrails (iter 4) — replay/$0.
+# Runtime budget controls: a squeezed budget turns the retry-loop into escalate, visible in the path:
+make budget-demo                # AW_RUN_BUDGET_USD squeezed → "… → request-info ↻1 → escalate  [budget]"
+#                                 (default budget leaves golden paths unchanged: make path-gate stays green)
+
+# Per-node SLO alerting: push per-node metrics to Prometheus, Grafana alert rule names the slow node.
+make slo-up                     # Prometheus (9090) + Pushgateway (9091) + Grafana (3002; admin/lite-password)
+make metrics-push               # RunRecord → Pushgateway: per-node latency/cost + budget-escalation counter
+make slo-verify                 # verify FROM the store: per-node series (Prometheus) + alert rule Firing (Grafana)
+make down                       # stop everything (incl. the obs + slo profiles)
 ```
 
 Make targets: `make check` (lint+types+tests, includes the path-gate), `make smoke` (run the smoke
 fixture), `make path-gate`/`make path-gate-broken` (trajectory regression gate — green base pack /
 red route-change demo), `make up`/`make down` (MLflow / everything), `make golden-upload`/`make
 golden-verify` (trajectory golden-set in MLflow), `make obs-up` + `make trace-base` +
-`make langfuse-verify` (per-node cost/latency attribution in Langfuse),
+`make langfuse-verify` (per-node cost/latency attribution in Langfuse), `make budget-demo` (runtime
+budget controls — squeezed budget routes the retry-loop to `escalate`), `make slo-up` + `make
+metrics-push` + `make slo-verify` (per-node SLO alerting in Prometheus/Grafana),
 `make author-cassettes`/`make author-broken-cassettes` (regenerate the $0 cassettes), `make test`,
 `make fmt`.
 

@@ -140,6 +140,42 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # --- SLO-стек (iter 4, профиль `slo`): единственный новый инструмент проекта —
+  # Prometheus + Grafana (+ Pushgateway: батч-прогон короткоживущий, pull-модели скрейпить
+  # некого — официальный компаньон Prometheus для батч-джобов). Всё провижинится as-code из
+  # slo/; Grafana без named volume — состояние целиком воспроизводимо из репо.
+  prometheus:
+    profiles: ["slo"]
+    image: prom/prometheus:v3.5.0 # пин точной версии, как mlflow/langfuse выше
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./slo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  pushgateway:
+    profiles: ["slo"]
+    image: prom/pushgateway:v1.11.1
+    ports:
+      - "9091:9091"
+
+  grafana:
+    profiles: ["slo"]
+    image: grafana/grafana:12.0.2
+    environment:
+      # admin/lite-password — dev-сид (как LANGFUSE_INIT_* выше), не секрет; его же читает
+      # scripts/slo_verify.py через Settings
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: lite-password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports:
+      - "3002:3000" # UI http://localhost:3002; 3000/3001 заняты policywise/нашим Langfuse
+    volumes:
+      - ./slo/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./slo/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 # Named volumes: данные Langfuse живут отдельно от жизненного цикла контейнеров
 # (дашборд/трейсы переживают obs-down; полный сброс — down -v).
 volumes:

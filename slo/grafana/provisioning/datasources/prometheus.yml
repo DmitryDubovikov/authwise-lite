@@ -1,0 +1,10 @@
+# Datasource-as-code: uid aw-prometheus зашит — на него ссылаются дашборд и alert rule.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: aw-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true

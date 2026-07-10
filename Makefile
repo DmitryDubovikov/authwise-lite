@@ -1,4 +1,4 @@
-.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up record-base replay-base trace-base golden-upload golden-verify langfuse-verify
+.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up slo-up metrics-push budget-demo slo-verify record-base replay-base trace-base golden-upload golden-verify langfuse-verify
 
 # pk-aw/sk-aw — детерминированный dev-сид Langfuse (LANGFUSE_INIT_* в docker-compose.yml), не секрет
 LANGFUSE_KEYS = AW_LANGFUSE_PUBLIC_KEY=pk-aw AW_LANGFUSE_SECRET_KEY=sk-aw
@@ -49,11 +49,23 @@ golden-upload: ## залить trajectory golden-сет в MLflow Evaluation Dat
 golden-verify: ## verify в сторе (правило 9): записи + квота singleton из MLflow API
 	uv run python -m scripts.golden_verify
 
+budget-demo: ## FinOps guardrail: ужатый бюджет рана обрывает retry-loop → escalate [budget] (replay, $$0)
+	AW_CASSETTE_SET=base AW_RUN_BUDGET_USD=0.00008 uv run python -m app.cli fixtures/requests-base.jsonl
+
+metrics-push: ## RunRecord базовой пачки → Pushgateway (per-node latency/cost + budget-эскалации); нужны slo-up и replay-base/budget-demo
+	AW_CASSETTE_SET=base uv run python -m scripts.metrics_push
+
+slo-verify: ## verify the store (правило 9): per-node серии из Prometheus API + alert rule Firing из Grafana API
+	uv run python -m scripts.slo_verify
+
 up: ## поднять MLflow (sqlite-бэкенд)
 	docker compose up -d mlflow
 
 obs-up: ## поднять Langfuse-стек (профиль obs); UI http://localhost:3001 (dev@authwise.lite / lite-password)
 	docker compose --profile obs up -d
 
-down: ## погасить всё, включая obs-профиль (трейсы/дашборды переживают в named volumes)
-	docker compose --profile obs down
+slo-up: ## поднять Prometheus+Pushgateway+Grafana (профиль slo); Grafana http://localhost:3002 (admin / lite-password)
+	docker compose --profile slo up -d
+
+down: ## погасить всё, включая obs/slo-профили (трейсы переживают в named volumes; SLO-стек — as-code из slo/)
+	docker compose --profile obs --profile slo down

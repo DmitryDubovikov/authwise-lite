@@ -9,6 +9,7 @@ dependencies = [
     "langgraph>=1,<2",
     "litellm>=1.55,<2",
     "mlflow>=3.4,<4",
+    "prometheus-client>=0.21,<1",
     "pydantic>=2.7,<3",
     "pydantic-settings>=2.3,<3",
     "pyyaml>=6",

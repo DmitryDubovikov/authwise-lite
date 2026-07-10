@@ -21,6 +21,7 @@ class RunRecord:
     request_id: str
     trace: PathTrace  # источник истины golden/CI-ассертов (правило 6)
     node_stats: tuple[NodeStat, ...]  # per-node usage/latency (контракт №3), не ассертится
+    budget_escalated: bool = False  # escalate по исчерпанию бюджета (iter 4) → счётчик метрик
 
 
 async def run_batch(requests: list[PARequest], *, settings: Settings) -> list[RunRecord]:
@@ -28,7 +29,12 @@ async def run_batch(requests: list[PARequest], *, settings: Settings) -> list[Ru
     results = await asyncio.gather(*(run_pa_request(r, settings=settings) for r in requests))
     tracing.flush(settings)  # дожать батч-экспортер Langfuse на границе прогона (no-op без ключей)
     return [
-        RunRecord(request_id=request.id, trace=result.trace, node_stats=result.node_stats)
+        RunRecord(
+            request_id=request.id,
+            trace=result.trace,
+            node_stats=result.node_stats,
+            budget_escalated=result.budget_escalated,
+        )
         for request, result in zip(requests, results, strict=True)
     ]
 
@@ -42,9 +48,16 @@ def _to_dict(record: RunRecord) -> dict[str, object]:
             "nodes": list(record.trace.nodes),
         },
         "node_stats": [
-            {"node": s.node, "attempt": s.attempt, "usage": s.usage, "latency_ms": s.latency_ms}
+            {
+                "node": s.node,
+                "attempt": s.attempt,
+                "tier": s.tier,
+                "usage": s.usage,
+                "latency_ms": s.latency_ms,
+            }
             for s in record.node_stats
         ],
+        "budget_escalated": record.budget_escalated,
     }
 
 
@@ -64,12 +77,20 @@ def _from_dict(data: dict[str, object]) -> RunRecord:
             NodeStat(
                 node=str(s["node"]),
                 attempt=int(s["attempt"]),
+                tier=str(s["tier"]),
                 usage=s["usage"],
                 latency_ms=float(s["latency_ms"]),
             )
             for s in stats
         ),
+        budget_escalated=bool(data.get("budget_escalated", False)),
     )
+
+
+def records_path(settings: Settings) -> Path:
+    """Конвенция имени артефакта прогона (контракт №3): runs/<cassette_set>.jsonl — одно место
+    вместо копий в каждом транспорте (CLI, path-gate, metrics-push; Phoenix в iter 5)."""
+    return settings.runs_dir / f"{settings.cassette_set}.jsonl"
 
 
 def write_records(records: list[RunRecord], path: Path) -> None:

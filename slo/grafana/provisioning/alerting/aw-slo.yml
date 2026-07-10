@@ -1,0 +1,47 @@
+# Grafana-managed alert rule as-code (решение спеки 04: Alertmanager не тащим — уведомления
+# наружу не нужны, кадр витрины — Firing в Grafana UI). Правило мультиразмерное: инстанс на
+# каждую метку node — алерт называет просевшую ноду.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: aw-slo
+    folder: authwise-lite
+    interval: 10s
+    rules:
+      - uid: aw-node-latency-slo
+        title: Per-node latency SLO
+        condition: breach
+        data:
+          - refId: latency
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: aw-prometheus
+            model:
+              refId: latency
+              expr: max by (node) (aw_node_latency_ms_avg)
+              instant: true
+          - refId: breach
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: breach
+              type: threshold
+              expression: latency
+              conditions:
+                # aw-lite: 0.01ms — ужатый демо-порог (в replay латентность ~0, реальные SLO
+                # снимать не с чего) → в проде порог калибруется по live-замерам ноды
+                - evaluator:
+                    type: gt
+                    params: [0.01]
+        for: 30s
+        # до первого metrics-push серий нет — это не инцидент
+        noDataState: OK
+        execErrState: Error
+        labels:
+          slo: latency
+        annotations:
+          summary: "нода {{ $labels.node }} превысила SLO-порог латентности"

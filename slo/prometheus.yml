@@ -1,0 +1,10 @@
+# Prometheus (iter 4): единственная цель — Pushgateway с батч-метриками authwise.
+# honor_labels: метки job/set из пуша не затираются метками скрейпа.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]

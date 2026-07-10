@@ -41,6 +41,7 @@ class NodeStat:
 
     node: str
     attempt: int
+    tier: str  # тир фиксируется в момент вызова — cost прогона не переоценивается текущим env
     usage: dict[str, Any] | None
     latency_ms: float
 

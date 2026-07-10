@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     retry_limit: int = 2  # потолок retry-цикла N (контракт №2)
     tier_classify: str = "cheap"
     tier_policy_check: str = "cheap"
+    # Бюджет рана в USD (контракт №5, iter 4): retry-loop продолжается только при положительном
+    # остатке. Дефолт калиброван с ~350× запасом над самым дорогим golden-раном (~$0.000145 на
+    # cheap-тире) — golden-пути не меняет; демо budget-эскалации — ужатый бюджет через env.
+    run_budget_usd: float = 0.05
 
     openai_api_key: SecretStr | None = None
     openai_base_url: str | None = None
@@ -30,6 +34,15 @@ class Settings(BaseSettings):
     langfuse_host: str = "http://localhost:3001"
     langfuse_public_key: str | None = None
     langfuse_secret_key: SecretStr | None = None
+
+    # SLO-стек (iter 4): Pushgateway принимает батч-метрики, Prometheus скрейпит его, Grafana
+    # вычисляет alert rule. Порт Grafana 3002: 3000/3001 заняты policywise/нашим Langfuse.
+    # admin/lite-password — dev-сид из docker-compose.yml (как pk-aw у Langfuse), не секрет.
+    pushgateway_url: str = "http://localhost:9091"
+    prometheus_url: str = "http://localhost:9090"
+    grafana_url: str = "http://localhost:3002"
+    grafana_user: str = "admin"
+    grafana_password: SecretStr = SecretStr("lite-password")
 
     tiers_path: Path = _ROOT / "llm-tiers.yaml"
     cassettes_dir: Path = _ROOT / "cassettes"

@@ -1,0 +1,81 @@
+{
+  "uid": "aw-slo",
+  "title": "authwise-lite — per-node SLO",
+  "tags": ["authwise-lite", "trajectory-eval"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Латентность по нодам (avg, ms)",
+      "description": "Средняя латентность LLM-вызова ноды за последний батч (replay ≈ 0 — SLO-порог демо ужат)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aw_node_latency_ms_avg",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Cost по нодам (USD за батч)",
+      "description": "Суммарный cost ноды за батч: usage из кассет × цены llm-tiers.yaml (контракт №5)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 6 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aw_node_cost_usd",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Budget-эскалации (батч)",
+      "description": "Ранoв, ушедших в escalate по исчерпанию AW_RUN_BUDGET_USD (FinOps guardrail)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "refId": "A", "expr": "aw_budget_escalations" }]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Заявок в батче",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "targets": [{ "refId": "A", "expr": "aw_runs" }]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "LLM-вызовов по нодам (батч)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "options": { "textMode": "value_and_name" },
+      "targets": [{ "refId": "A", "expr": "aw_node_calls", "legendFormat": "{{node}}" }]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ def replay_settings(cassette_set: str) -> Settings:
         llm_mode="replay",
         cassette_set=cassette_set,
         retry_limit=2,
+        run_budget_usd=0.05,  # пин как retry_limit: от бюджета зависят маршруты (iter 4)
         tier_classify="cheap",
         tier_policy_check="cheap",
         cassettes_dir=ROOT / "cassettes",

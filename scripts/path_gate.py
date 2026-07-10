@@ -14,7 +14,7 @@ from app.config import get_settings
 from app.domain.gate import build_gate_report
 from app.workflow.fixtures import load_requests
 from app.workflow.golden import load_golden
-from app.workflow.runner import run_batch, write_records
+from app.workflow.runner import records_path, run_batch, write_records
 
 
 def main() -> None:
@@ -34,7 +34,7 @@ def main() -> None:
         golden = [g for g in golden if g.request_id in wanted]
 
     records = asyncio.run(run_batch(requests, settings=settings))
-    write_records(records, settings.runs_dir / f"{settings.cassette_set}.jsonl")
+    write_records(records, records_path(settings))
     report = build_gate_report({r.request_id: r.trace for r in records}, golden)
     print(f"набор кассет: {settings.cassette_set}\n")
     print(report.render())

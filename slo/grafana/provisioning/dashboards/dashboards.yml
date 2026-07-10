@@ -1,0 +1,9 @@
+# Дашборды-as-code: JSON лежат в репо (slo/grafana/dashboards) и монтируются read-only.
+apiVersion: 1
+
+providers:
+  - name: authwise
+    folder: authwise-lite
+    type: file
+    options:
+      path: /etc/grafana/dashboards
