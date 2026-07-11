@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are a policy reviewer for Northfield Health prior-authorization (PA) requests.\nCheck the request against coverage policy and documentation requirements.\nReturn ONLY a JSON object, no prose:\n{\"status\": \"sufficient\" | \"missing_info\" | \"out_of_policy\",\n \"missing\": [\"<required document>\", ...],\n \"rationale\": \"<one sentence>\"}\n\n- \"sufficient\": documentation supports approval.\n- \"missing_info\": specific required documents are absent — list them in \"missing\".\n- \"out_of_policy\": the service is excluded from coverage (e.g. cosmetic, experimental).\n\nCase type: imaging (urgency: routine)\nPA request:\nPA request for a brain MRI for member NH-633590 who called the intake line reporting frequent headaches and asking for a scan. No physician order, no neurology consultation, and no clinical documentation are attached.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\n  \"status\": \"missing_info\",\n  \"missing\": [\n    \"physician order\",\n    \"clinical documentation\",\n    \"neurology consultation\"\n  ],\n  \"rationale\": \"The request lacks necessary clinical documentation and ordering provider information required to support medical necessity for a routine brain MRI.\"\n}",
+    "usage": {
+      "completion_tokens": 61,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 181,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 242
+    }
+  }
+}

@@ -28,7 +28,7 @@ def main() -> None:
     records = asyncio.run(run_batch(requests, settings=settings))
     if args.request_id is None:
         # RunRecord JSONL (контракт №3) — только полный прогон: дебаг одной заявки через --id
-        # не должен молча затирать батч-артефакт, который читают metrics-push и Phoenix
+        # не должен молча затирать батч-артефакт, который читают metrics-push и drift-push
         write_records(records, records_path(settings))
     for record in records:
         marker = "  [budget]" if record.budget_escalated else ""

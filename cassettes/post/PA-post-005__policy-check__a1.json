@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "content": "You are a policy reviewer for Northfield Health prior-authorization (PA) requests.\nCheck the request against coverage policy and documentation requirements.\nReturn ONLY a JSON object, no prose:\n{\"status\": \"sufficient\" | \"missing_info\" | \"out_of_policy\",\n \"missing\": [\"<required document>\", ...],\n \"rationale\": \"<one sentence>\"}\n\n- \"sufficient\": documentation supports approval.\n- \"missing_info\": specific required documents are absent — list them in \"missing\".\n- \"out_of_policy\": the service is excluded from coverage (e.g. cosmetic, experimental).\n\nCase type: medication (urgency: routine)\nPA request:\nPA request for tirzepatide (Zepbound) for member NH-655138 for weight loss, BMI 34 without diabetes. Attached: prescriber order and gym membership receipts. Weight-loss drugs are listed as an exclusion in the member's plan.\n",
+      "role": "user"
+    }
+  ],
+  "model": "gpt-4.1-nano-2025-04-14",
+  "response": {
+    "content": "{\n  \"status\": \"out_of_policy\",\n  \"missing\": [],\n  \"rationale\": \"Tirzepatide for weight loss is an excluded service per the member's plan coverage policy.\"\n}",
+    "usage": {
+      "completion_tokens": 42,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": null,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "prompt_tokens": 191,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null,
+        "video_tokens": null
+      },
+      "total_tokens": 233
+    }
+  }
+}

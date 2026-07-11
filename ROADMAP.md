@@ -8,12 +8,13 @@
 Источник истины по **порядку и составу**. Архитектурные правила — в `CLAUDE.md`. Тонкая спека
 каждой итерации создаётся `/iterationStart N` в `specs/NN/`.
 
-Статусы: ⬜ todo · 🟦 in progress · ✅ done.
+Статусы: ⬜ todo · 🟦 in progress · ✅ done · ❌ отменено.
 
-> Бюджет: **6 содержательных итераций + каркас (iter 0) + 1 опц. хвост = 7–8**, потолок ниже,
+> Бюджет: **6 содержательных итераций + каркас (iter 0) = 7** (опц. хвост iter 7 отменён —
+> решение 2026-07-10, Заметки №7), потолок ниже,
 > чем у triagewise-lite (9). Это осознанно: почти весь тулинг здесь **переиспользуется** из
 > policywise-lite (LangGraph, LiteLLM, кассеты) и triagewise-lite (MLflow, promptfoo/DeepEval,
-> OTel, Langfuse, Phoenix) — новых инструментов не вводим, **с одним осознанным исключением:
+> OTel, Langfuse) — новых инструментов не вводим, **с одним осознанным исключением:
 > Prometheus/Grafana (iter 4, Заметки)**; по правилу «новый инструмент → каркас на его
 > освоение» исключение получает собственную итерацию. Растёт в остальном только **техника**:
 > объект измерения — путь агента по графу, а не финальный ответ и не отдельный prompt-вызов.
@@ -45,7 +46,7 @@
 
 Контракты, которые потребляются **несколькими** итерациями, — фиксируются здесь, чтобы каждый
 `/iterationStart` не решал их заново и по-своему. Внутренности одиночных итераций (тексты
-промптов, маппинг полей Evaluation Dataset, wiring Langfuse/Phoenix, панели Grafana) здесь
+промптов, маппинг полей Evaluation Dataset, wiring Langfuse, панели Grafana) здесь
 НЕ фиксируются — это скоуп тонких спек.
 
 1. **Схема заявки-фикстуры** (iter 0/1/2/5): один формат для всех пачек — JSONL,
@@ -56,10 +57,10 @@
    *бюджета* (iter 4) → `escalate`. Ассерты — только по `(branch, retry_cycles)`; `nodes` —
    информационное поле (витрина, Langfuse), в golden/CI не ассертится. **Потолок retry N=2** —
    фиксируется до разметки golden (iter 1), от N зависят ожидаемые `retry_cycles`.
-3. **`RunRecord` — единый артефакт батч-прогона** (iter 2/4/5/7): один раннер в workflow-слое
+3. **`RunRecord` — единый артефакт батч-прогона** (iter 2/4/5): один раннер в workflow-слое
    гонит пачку через граф и пишет JSONL `{request_id, path_trace, per-node usage/latency}`;
-   CI-таблица, Prometheus-метрики, Phoenix-датасеты и Prefect re-eval **читают его**, а не
-   гоняют граф каждый по-своему.
+   CI-таблица и Prometheus-метрики (SLO — iter 4, drift — iter 5) **читают его**, а не гоняют
+   граф каждый по-своему.
 4. **Раскладка кассет** (iter 0/2/5): каталог на набор — `cassettes/<set>/`
    (`base`, `base-broken-policy`, `post`), набор выбирается env (`AW_CASSETTE_SET`); ключ внутри
    набора — `(request_id, node, attempt)`, **не хэш содержимого запроса** — это структурное
@@ -82,9 +83,9 @@
 | **2** ✅ | — *(новая техника ассертов в старом движке)* | **CI path-assertion gate / trajectory regression testing** | CI-джоб (pytest; движок — Заметки) гоняет граф по golden-сету **в replay** и ассертит **пройденную ветку + число итераций retry-loop**, не текст ответа; **branch protection на GitHub** — красный CI реально блокирует мёрдж; демо-регрессия: «сломанный» policy-check живёт в демо-ветке **со своими record-кассетами** (гейтированный расход, Заметки) — CI краснеет из-за смены маршрута, а не cassette-miss | CI-паттерн eval-гейта из triagewise; ассерты переписаны на путь (движок — Заметки) |
 | **3** ✅ | — *(новая атрибуция в старом слое трейсинга)* | **Per-node cost/latency attribution** (graph-level LLM FinOps: измерение) | спаны атрибутируются **по ноде графа**, не по всему run; Langfuse подключён через **LangGraph-интеграцию (callback handler)** — она включает Agent Graph-вид, голый OTel его не даёт; Langfuse добавлен в Compose; дашборд бьёт cost/latency по нодам и называет просевшую ноду | Langfuse из triagewise; способ подключения — LangGraph-handler (уживание с OTel вокруг `route()` — деталь `/iterationStart 3`) |
 | **4** ✅ | **Prometheus + Grafana** — единственный новый инструмент проекта (Заметки) | **Agent FinOps guardrails: per-node SLO alerting + runtime budget controls** | per-node метрики (latency, cost, счётчик budget-эскалаций) экспортируются в Prometheus; Grafana-дашборд по нодам + **alert rule на SLO-порог** (демо — ужатый порог, replay); **retry-loop гейтится остатком бюджета рана: исчерпание → `escalate`** (существующая ветка, новых полей `PathTrace` нет; дефолтный бюджет не меняет golden-пути, демо — ужатый бюджет через env) | метрики поверх графа/OTel из iter 3; Prom/Grafana — новые, отсюда собственная итерация-каркас |
-| **5** ⬜ | — *(Phoenix — переиспользование, новая метрика)* | **Path-distribution drift monitoring** | «пострелизная» пачка **~30 заявок** сгенерена + record-кассеты (гейтированный расход); Phoenix-дашборд показывает **дрейф распределения выбранных веток** (доля `escalate`/`request-info` растёт) между базовой (reference) и «пострелизной» (primary) пачкой, а не дрейф качества ответа | Phoenix из triagewise, объект мониторинга — путь |
+| **5** ✅ | — *(PSI на рельсах Prom/Grafana iter 4; решение 2026-07-10, Заметки №5 — Phoenix исключён)* | **Path-distribution drift monitoring** | «пострелизная» пачка **~30 заявок** сгенерена + record-кассеты (гейтированный расход); **PSI по распределению веток** — чистая domain-функция; Grafana-панель показывает **дрейф распределения выбранных веток** (доля `escalate`/`request-info` растёт) между базовой (reference) и «пострелизной» (primary) пачкой + **alert rule на PSI-порог срабатывает честно** (сдвиг настоящий, порог 0.2 — отраслевой, не ужимаем); verify — запросом к Prometheus/Grafana API | Prom/Grafana-рельсы iter 4 (Pushgateway, провижининг as-code); объект мониторинга — распределение путей |
 | **6** ⬜ | — | **Routing-policy as versioned artifact** (application-версия пинит версии промптов) | промпты `classify`/`policy-check` в Prompt Registry; **LoggedModel-версия routing-policy пинит их конкретные версии**; alias `champion`/`challenger`; ручной swap; verify запросом к MLflow (правило 9) | MLflow 3, решение «Г» (CLAUDE.md → Стек) |
-| **7** ⬜ *(опц. хвост)* | — | **Continuous trajectory-eval loop** | Prefect по расписанию: re-eval challenger routing-policy на trajectory golden-сете → gate (challenger даёт меньше расхождений с ожидаемым путём?) → swap alias → hot-reload | Prefect из triagewise, gate — на путь |
+| **7** ❌ *(отменён 2026-07-10, Заметки №7)* | — | ~~Continuous trajectory-eval loop~~ | — (был: Prefect по расписанию re-eval challenger → gate → swap alias; отменён — механика промоушена уже показана в triagewise, резюме-строки от итерации не зависят) | — |
 
 **Финал (церемония, не итерация):** сборка showcase-README по чек-листу «Витрина (финал)» —
 таблица north-star → доказательство, стек-строка только из реально продемонстрированного.
@@ -108,7 +109,7 @@
 | Agent FinOps guardrails: per-node SLO alerting + runtime budget controls | iter 4 |
 | Path-distribution drift monitoring | iter 5 |
 | Routing-policy as versioned artifact (пиннинг промпт-версий) | iter 6 |
-| Continuous trajectory-eval loop | iter 7 (опц.) |
+| ~~Continuous trajectory-eval loop~~ | — (iter 7 отменён 2026-07-10, Заметки №7) |
 
 ## Витрина (финал): что показываем от каждого инструмента
 
@@ -124,9 +125,8 @@
 | Красный CI-job, блокирующий мёрдж + таблица «ожидаемый vs фактический путь» | path-assertion gate | iter 2 |
 | **Langfuse Agent Graph** — граф с реальным маршрутом запуска + cost/latency по нодам | per-node attribution, «видно, как ходит агент» | iter 3 |
 | Grafana: per-node SLO-дашборд + сработавший алерт; CLI: retry-loop обрывается по бюджету → `escalate` | FinOps guardrails (SLO alerting + budget controls) | iter 4 |
-| Phoenix: распределение веток базовой и «пострелизной» пачки рядом — дрейф виден | path-drift monitoring | iter 5 |
+| Grafana: распределение веток базовой (reference) и «пострелизной» (primary) пачки рядом + сработавший PSI-алерт | path-drift monitoring | iter 5 |
 | MLflow UI: routing-policy-версия пинит версии промптов; alias `champion` до/после swap | routing-policy as artifact | iter 6 |
-| Prefect UI: расписание re-eval → gate → авто-swap alias | continuous trajectory-eval loop | iter 7 (опц.) |
 
 ## Отношение к policywise-lite и triagewise-lite
 
@@ -180,17 +180,22 @@ Cloud-only через тиры, как в triagewise. Кассеты `replay`=$0
 - **DVC осознанно не тянем.** В triagewise golden-сет жил в DVC, а промпт — в MLflow. Здесь
   golden-путь **и есть** версионируемый артефакт реестра — это красная нить iter 1; второй стор
   версионирования дублировал бы демонстрацию, ничего не добавляя к north-star.
-- **№5 — дрейф здесь категориальный, не embedding; Phoenix проверен (2026-07-03).** Объект —
-  распределение выбранных веток (доли `approve`/`request-info`/`escalate`), а не дрейф
-  эмбеддингов/качества, как в triagewise. По докам: **Phoenix Inferences** (`px.Schema`,
-  primary vs reference) поддерживает структурные/категориальные колонки (features/predictions)
-  **без эмбеддингов** и даёт drift-сравнение двух inference-сетов. План: ветка из `PathTrace` —
-  категориальная колонка; базовая пачка = reference, «пострелизная» = primary. Оговорки:
-  Inferences — легаси-уголок Phoenix (актуальный фокус — tracing/evals; страницы доков
-  переезжают) → **версию пиннить**; это batch-анализ двух наборов, а не стриминговый мониторинг —
-  для existence-gate достаточно, в доках не называть «real-time». Fallback (χ²/PSI своими руками
-  + визуализация) остаётся на случай, если в OSS-UI не окажется per-feature drift-карточки.
-  Финальная механика — `/iterationStart 5`.
+- **№5 — path-drift: пересмотрено 2026-07-10 (`/iterationStart 5`) — PSI + Prometheus/Grafana,
+  Phoenix исключён из проекта.** Объект не изменился: дрейф **категориальный** — распределение
+  выбранных веток (доли `approve`/`request-info`/`escalate`), не эмбеддинги/качество, как в
+  triagewise. План 2026-07-03 (Phoenix Inferences, primary vs reference) разбился о факты,
+  проверенные по коду репозитория Phoenix: (а) Inferences жили **только in-process** —
+  `px.launch_app(primary, reference)`; docker-серверу их не отдать, API для загрузки нет;
+  (б) **вырезаны в v14.0.0 (апрель 2026)** вместе с GraphQL/REST API (MIGRATION.md; последний
+  релиз с фичей — 13.23.0), замены в OSS-Phoenix нет — drift-мониторинг уехал в коммерческий
+  Arize AX. Пин мёртвой legacy-версии ради кадра витрины — антирассказ для резюме. Решение
+  (вариант Б): бывший fallback и есть отраслевой мейнстрим — **PSI по распределению веток**
+  (чистая domain-функция; пороги 0.1/0.2 — конвенция) + доли веток и PSI-гейдж через
+  Pushgateway-рельсы iter 4 → Grafana-панель reference vs primary + **alert rule на PSI>0.2,
+  срабатывает честно** (сдвиг «пострелизной» пачки настоящий — в отличие от SLO-демо iter 4 с
+  ужатым порогом). Это batch-по-требованию пуш после прогона пачки, не стриминг — в доках не
+  называть «real-time». Резюме-строка path-drift переписана (CLAUDE.md): Arize Phoenix из
+  проекта ушёл — он уже показан в triagewise, потери для портфолио нет.
 - **Развилки, решённые до старта (2026-07-03) — полные формулировки в CLAUDE.md → «Стек:
   развилки уже решены»:** провайдер — OpenAI (тиры/пиннинг из triagewise); `PathTrace` —
   first-class domain-объект (OTel — не источник истины ассертов); golden-семантика — membership
@@ -203,5 +208,14 @@ Cloud-only через тиры, как в triagewise. Кассеты `replay`=$0
   на ней, swap атомарный. До iter 6 промпты живут в коде (iter 2 ломает промпт policy-check
   прямо в рабочем дереве — реестр гейту не нужен); регистрация + пиннинг + alias-загрузка +
   ручной swap — скоуп iter 6 (**не** опц.: закрывает строку резюме про routing-policy);
-  автопромоушен по расписанию — iter 7 (опц.). Fallback при разбухании iter 6: alias на одном
-  промпте policy-check с пометкой `# aw-lite:`.
+  автопромоушен по расписанию (бывший iter 7) отменён — Заметки №7. Fallback при разбухании
+  iter 6: alias на одном промпте policy-check с пометкой `# aw-lite:`.
+- **№7 — iter 7 (Continuous trajectory-eval loop) отменён (решение 2026-07-10).** Замысел —
+  Prefect по расписанию: re-eval challenger routing-policy на golden-сете → gate по пути →
+  авто-swap alias. Причины отмены: (а) это champion/challenger-промоушен *как механика*, а он
+  в CLAUDE.md явно в списке «не дублировать в резюме» — уже показан в triagewise; единственная
+  новизна (gate по пути) демонстрируется в iter 2 (CI-gate) и iter 6 (ручной swap);
+  (б) ни одна из двух зафиксированных резюме-строк и стек-строка iter 7 не упоминают — отмена
+  не требует править north-star; (в) ненулевые усилия (Prefect-wiring, hot-reload) при почти
+  нулевой добавке к красной нити. Следствия: Prefect в проекте не используется; после iter 6 —
+  сразу финальная церемония (showcase-README); кадр «Prefect UI» удалён из чек-листа витрины.

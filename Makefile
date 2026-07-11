@@ -1,4 +1,4 @@
-.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up slo-up metrics-push budget-demo slo-verify record-base replay-base trace-base golden-upload golden-verify langfuse-verify
+.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up slo-up metrics-push budget-demo slo-verify record-base replay-base trace-base golden-upload golden-verify langfuse-verify record-post replay-post drift-push drift-verify
 
 # pk-aw/sk-aw — детерминированный dev-сид Langfuse (LANGFUSE_INIT_* в docker-compose.yml), не секрет
 LANGFUSE_KEYS = AW_LANGFUSE_PUBLIC_KEY=pk-aw AW_LANGFUSE_SECRET_KEY=sk-aw
@@ -48,6 +48,18 @@ golden-upload: ## залить trajectory golden-сет в MLflow Evaluation Dat
 
 golden-verify: ## verify в сторе (правило 9): записи + квота singleton из MLflow API
 	uv run python -m scripts.golden_verify
+
+record-post: ## записать кассеты «пострелизной» пачки (ДЕНЬГИ ≈$$0.01–0.02, только по явной просьбе — правило 4)
+	AW_LLM_MODE=record AW_CASSETTE_SET=post uv run python -m app.cli fixtures/requests-post.jsonl
+
+replay-post: ## прогон «пострелизной» пачки по кассетам (replay, $$0), печатает пути
+	AW_CASSETTE_SET=post uv run python -m app.cli fixtures/requests-post.jsonl
+
+drift-push: ## path-drift: доли веток base (reference) vs post (primary) + PSI → Pushgateway; нужны slo-up, replay-base и replay-post
+	uv run python -m scripts.drift_push
+
+drift-verify: ## verify the store (правило 9): доли веток и PSI из Prometheus API + alert rule Firing из Grafana API
+	uv run python -m scripts.drift_verify
 
 budget-demo: ## FinOps guardrail: ужатый бюджет рана обрывает retry-loop → escalate [budget] (replay, $$0)
 	AW_CASSETTE_SET=base AW_RUN_BUDGET_USD=0.00008 uv run python -m app.cli fixtures/requests-base.jsonl

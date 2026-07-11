@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     # SLO-стек (iter 4): Pushgateway принимает батч-метрики, Prometheus скрейпит его, Grafana
     # вычисляет alert rule. Порт Grafana 3002: 3000/3001 заняты policywise/нашим Langfuse.
     # admin/lite-password — dev-сид из docker-compose.yml (как pk-aw у Langfuse), не секрет.
+    # Path-drift (iter 5): какие RunRecord-артефакты сравнивать — reference (эталонный трафик)
+    # и primary (текущий); PSI-гейдж и alert rule едут по рельсам SLO-стека iter 4. Дашборд
+    # пинит роли (лейбл role), не имена сетов — ручки крутятся без правки провижининга.
+    drift_reference_set: str = "base"
+    drift_primary_set: str = "post"
+
     pushgateway_url: str = "http://localhost:9091"
     prometheus_url: str = "http://localhost:9090"
     grafana_url: str = "http://localhost:3002"

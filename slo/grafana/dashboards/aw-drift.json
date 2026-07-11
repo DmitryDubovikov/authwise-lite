@@ -1,0 +1,76 @@
+{
+  "uid": "aw-drift",
+  "title": "authwise-lite — path-distribution drift",
+  "tags": ["authwise-lite", "trajectory-eval"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "bargauge",
+      "title": "Ветки — reference (эталонный трафик)",
+      "description": "Доли терминальных веток эталонной пачки (RunRecord); имя пачки — в подписи серии",
+      "gridPos": { "h": 8, "w": 9, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "options": { "displayMode": "gradient", "orientation": "horizontal" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aw_branch_share{role=\"reference\"}",
+          "instant": true,
+          "legendFormat": "{{branch}} ({{set}})"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "bargauge",
+      "title": "Ветки — primary (текущий трафик)",
+      "description": "Доли терминальных веток текущей пачки: escalate/request-info растут — дрейф маршрутов, не качества ответа",
+      "gridPos": { "h": 8, "w": 9, "x": 9, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "options": { "displayMode": "gradient", "orientation": "horizontal" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aw_branch_share{role=\"primary\"}",
+          "instant": true,
+          "legendFormat": "{{branch}} ({{set}})"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "PSI (primary vs reference)",
+      "description": "Population Stability Index распределения веток; конвенция: <0.1 — нет сдвига, 0.1–0.2 — умеренный, >0.2 — значимый (порог alert rule)",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "aw-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "refId": "A", "expr": "aw_path_drift_psi", "instant": true }]
+    }
+  ]
+}

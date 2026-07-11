@@ -39,7 +39,9 @@
    исчерпание бюджета — это **маршрут** (`escalate`), а не исключение; видно на уровне траектории.
 6. **Path-distribution drift monitoring** — дрейф распределения веток, не качества ответа.
 7. **Routing-policy as versioned artifact** — application-версия пинит версии промптов (iter 6).
-8. **Continuous trajectory-eval loop** (опц. хвост) — промоушен routing-policy по gate на путь.
+8. ~~Continuous trajectory-eval loop~~ — **отменён (решение 2026-07-10, ROADMAP → Заметки №7):**
+   механика промоушена по расписанию — champion/challenger *как механика*, уже показана в
+   triagewise; зафиксированные резюме-строки и стек-строка от него не зависят.
 
 **Net-new ИНСТРУМЕНТЫ: ОДИН — Prometheus + Grafana (iter 4; решение 2026-07-06).** Пары нет ни
 в одном сиблинге при максимальной частотности в вакансиях, а SLO без alert rule — просто лог.
@@ -56,14 +58,14 @@
 - *«Built a trajectory-eval control plane for a multi-step LangGraph agent: a versioned
   trajectory golden-set and routing-policy versions pinning per-node prompt versions (MLflow),
   CI path-assertion gates that block merges on routing regressions (branch + retry-count), and
-  path-distribution drift monitoring (Arize Phoenix).»*
+  path-distribution drift monitoring with PSI-based alerting (Prometheus/Grafana).»*
 - *«Attributed cost/latency SLOs to individual graph nodes (agent-level LLM FinOps) via
   OpenTelemetry — per-node dashboards in Langfuse, SLO alerting in Prometheus/Grafana — and
   enforced runtime budget controls: a cost-bounded retry loop with budget-exhaustion
   escalation.»*
 - Стек-строка: `Agent trajectory evaluation · trajectory golden-set · CI path-assertion gates ·
-  per-node cost/latency SLO · runtime budget controls · path-drift monitoring · LangGraph ·
-  MLflow · Prometheus/Grafana · Arize Phoenix`
+  per-node cost/latency SLO · runtime budget controls · path-drift monitoring (PSI) · LangGraph ·
+  MLflow · Prometheus/Grafana`
 
 ---
 
@@ -72,7 +74,7 @@
 1. **Existence-gate, не accuracy-gate.** Итерация готова, когда техника *работает и видна* **И**
    пункт красной нити стал демонстрируемым: golden-сет — версия в реестре; CI реально краснеет
    при регрессии маршрутизации; Grafana-алерт называет просевшую ноду; ужатый бюджет уводит
-   retry-loop в `escalate`; Phoenix рисует дрейф веток.
+   retry-loop в `escalate`; Grafana рисует дрейф веток и PSI-алерт срабатывает.
    **Качество PA-решений — НЕ ворота.** Сознательный срез помечай `# aw-lite: <потолок> → <апгрейд>`.
 
    **Красная линия (что gate НЕ разрешает резать):** корректность демонстрируемой техники;
@@ -157,7 +159,9 @@ Prometheus/Grafana (правило 2 — позиционирование) ·
 eval качества ответа / LLM-as-judge (triagewise) · semantic caching (triagewise) · мульти-агент
 (dossier) · RAG (policywise) · fine-tuning / LoRA · **LiteLLM Proxy** (правило 5) · prod-deploy /
 k8s · DVC (golden-путь и есть артефакт реестра — ROADMAP → Заметки) · собственные
-accuracy-метрики PA-решений (existence-gate, не accuracy).
+accuracy-метрики PA-решений (existence-gate, не accuracy) · continuous-промоушен по расписанию
+(Prefect; iter 7 отменён 2026-07-10 — механика champion/challenger уже в triagewise, ROADMAP →
+Заметки №7).
 
 ## Стек: развилки уже решены (2026-07-03)
 
@@ -172,8 +176,9 @@ accuracy-метрики PA-решений (existence-gate, не accuracy).
   механизм MLflow 3 (`prompts=` при логировании / `set_active_model()`), не самодельный бандл.
   Alias `champion`/`challenger` вешаются на неё — **одну** сущность, swap атомарный. Iter 2
   ломает «во вред» промпт policy-check; iter 6 регистрирует, пинит и вручную свапает
-  (**не** опц. — закрывает строку резюме про routing-policy); iter 7 (опц.) промоутит по
-  расписанию. **Скоуп:** до iter 6 промпты живут в коде; регистрация + пиннинг + alias-загрузка —
+  (**не** опц. — закрывает строку резюме про routing-policy); автопромоушен по расписанию
+  (бывший iter 7) **отменён** — решение 2026-07-10, ROADMAP → Заметки №7. **Скоуп:** до iter 6
+  промпты живут в коде; регистрация + пиннинг + alias-загрузка —
   скоуп iter 6. **Fallback:** если механика LoggedModel в iter 6 окажется тяжёлой — деградация
   до alias на одном промпте policy-check, помеченная `# aw-lite:`.
 - **`PathTrace` — first-class domain-объект**; OTel — не источник истины ассертов (правило 6).
@@ -182,17 +187,21 @@ accuracy-метрики PA-решений (existence-gate, не accuracy).
   Strands, LangSmith) допускают multiple reference trajectories.
 - **Движок path-ассертов — pytest + собственный membership-ассерт** (рекомендация; agentevals —
   отраслевой референс, не тащим; promptfoo — наиболее искусственный, понижен); финализация на
-  `/iterationStart 2`. **Phoenix path-drift — проверено (2026-07-03):** Inferences
-  (primary/reference) берёт категориальные колонки без эмбеддингов; легаси-уголок Phoenix —
-  версию пиннить; fallback χ²/PSI остаётся (ROADMAP → Заметки).
+  `/iterationStart 2`. **Path-drift — пересмотрено 2026-07-10 (`/iterationStart 5`): PSI +
+  Prometheus/Grafana, Phoenix исключён из проекта.** План 2026-07-03 (Phoenix Inferences)
+  разбился о факты: Inferences жили только in-process (`px.launch_app`, docker-серверу их не
+  отдать) и **вырезаны в Phoenix v14.0.0 (апрель 2026)**; пин мёртвой legacy-версии ради кадра
+  витрины — антирассказ. Бывший fallback χ²/PSI и есть отраслевой мейнстрим; Phoenix в резюме
+  уже стоит у triagewise (детали — ROADMAP → Заметки №5).
 - **Langfuse через LangGraph-интеграцию (callback handler)** — per-node атрибуция + Agent
-  Graph-вид (iter 3; голый OTel структуру графа не рисует) · **Arize Phoenix** — path-drift
-  (iter 5) · **Prefect** — опц. iter 7.
+  Graph-вид (iter 3; голый OTel структуру графа не рисует) · **Prefect** — не используется
+  (iter 7 отменён 2026-07-10, ROADMAP → Заметки №7).
 - **Prometheus + Grafana — единственный новый инструмент (решение 2026-07-06, iter 4):**
   per-node метрики (latency, cost, счётчик budget-эскалаций) + Grafana-дашборд + alert rule на
   SLO-порог. В replay латентность ~0 → демо алерта через ужатый порог; cost — из `usage`,
   сохранённого в кассетах (требование к формату кассет — iter 0). Способ экспорта метрик
   (prometheus-client vs OTel-экспортер) — деталь `/iterationStart 4`. Перекрытие с Langfuse
-  осознанное: Langfuse = трейсинг/атрибуция, Prom/Grafana = SLO/алертинг.
+  осознанное: Langfuse = трейсинг/атрибуция, Prom/Grafana = SLO/алертинг; с iter 5 — также
+  path-drift (доли веток + PSI-гейдж + alert rule; решение 2026-07-10, ROADMAP → Заметки №5).
 
 **Не пересматривать без явного решения.**

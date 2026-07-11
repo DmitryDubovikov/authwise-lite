@@ -1,0 +1,46 @@
+# Path-drift alert rule as-code (iter 5), паттерн aw-slo.yml. Порог 0.2 — отраслевая конвенция
+# PSI (значимый сдвиг), НЕ ужат под демо (в отличие от latency-SLO iter 4): сдвиг «пострелизной»
+# пачки настоящий — рост доли escalate/request-info относительно базовой.
+# Порог = PSI_DRIFT_THRESHOLD (app/domain/drift.py) — правь синхронно.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: aw-drift
+    folder: authwise-lite
+    interval: 10s
+    rules:
+      - uid: aw-path-drift-psi
+        title: Path-distribution drift (PSI)
+        condition: breach
+        data:
+          - refId: psi
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: aw-prometheus
+            model:
+              refId: psi
+              expr: aw_path_drift_psi
+              instant: true
+          - refId: breach
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              refId: breach
+              type: threshold
+              expression: psi
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.2]
+        for: 30s
+        # до первого drift-push серий нет — это не инцидент
+        noDataState: OK
+        execErrState: Error
+        labels:
+          slo: path-drift
+        annotations:
+          summary: "распределение веток пути дрейфует: PSI primary vs reference выше порога 0.2"

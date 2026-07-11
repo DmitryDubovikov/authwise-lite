@@ -1,7 +1,7 @@
 """RunRecord — единый артефакт батч-прогона (контракт №3): один раннер в workflow-слое гонит
 пачку через граф и отдаёт `{request_id, path_trace, per-node usage/latency}`. CI-таблица
-(iter 2), Prometheus (iter 4), Phoenix (iter 5), Prefect (iter 7) читают ЕГО, а не гоняют граф
-каждый по-своему. Новых полей PathTrace нет — usage/latency живут рядом, в node_stats.
+(iter 2), Prometheus-метрики (SLO — iter 4, drift — iter 5), Prefect (iter 7) читают ЕГО, а не
+гоняют граф каждый по-своему. Новых полей PathTrace нет — usage/latency живут рядом, в node_stats.
 """
 
 import asyncio
@@ -87,10 +87,11 @@ def _from_dict(data: dict[str, object]) -> RunRecord:
     )
 
 
-def records_path(settings: Settings) -> Path:
+def records_path(settings: Settings, *, cassette_set: str | None = None) -> Path:
     """Конвенция имени артефакта прогона (контракт №3): runs/<cassette_set>.jsonl — одно место
-    вместо копий в каждом транспорте (CLI, path-gate, metrics-push; Phoenix в iter 5)."""
-    return settings.runs_dir / f"{settings.cassette_set}.jsonl"
+    вместо копий в каждом транспорте (CLI, path-gate, metrics-push, drift-push); drift-push
+    читает чужие сеты (reference vs primary), поэтому сет можно назвать явно."""
+    return settings.runs_dir / f"{cassette_set or settings.cassette_set}.jsonl"
 
 
 def write_records(records: list[RunRecord], path: Path) -> None:

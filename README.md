@@ -6,21 +6,20 @@ fixture; **path-level measurement is the product** — trajectory golden-set, CI
 gates, per-node cost/latency SLO, and path-distribution drift monitoring. See `CLAUDE.md`
 (constitution) and `ROADMAP.md` (iteration backbone).
 
-> **Status: iteration 4 closed** — **agent FinOps guardrails: per-node SLO alerting + runtime budget
-> controls**. Two guardrails turn iter 3's measurement into enforcement. (1) **Runtime budget
-> controls**: each run has a USD budget (`AW_RUN_BUDGET_USD`), and the retry-loop continues only while
-> the budget is positive — exhaustion routes the request to `escalate` (a human is cheaper than
-> another LLM cycle), so budget exhaustion is a **route** visible in the trajectory, not an exception.
-> The default budget leaves golden paths unchanged; `make budget-demo` squeezes it via env and the
-> retry-loop tips into `escalate  [budget]`. (2) **Per-node SLO alerting**: per-node latency/cost and a
-> budget-escalation counter are pushed to Prometheus (via Pushgateway — the batch is short-lived),
-> and a provisioned Grafana alert rule **names the node** that breaches the latency SLO. This is the
-> project's single new tool (Prometheus + Grafana). `make slo-up` brings the stack up, `make
-> metrics-push` lands the metrics ($0, from the RunRecord), and `make slo-verify` proves it *from the
-> store* (Prometheus + Grafana APIs, not a UI screen). Iter 3's Langfuse attribution
-> (`make trace-base`/`make langfuse-verify`), iter 2's CI path-assertion gate (`make path-gate`), and
-> iter 1's golden-set in MLflow (`make golden-upload`/`make golden-verify`) still stand. The quickstart
-> heading names the last iteration it actually covers, as in the sibling projects.
+> **Status: iteration 5 closed** — **path-distribution drift monitoring (PSI, Prometheus/Grafana)**.
+> The gates watch the *agent*; this iteration watches the *traffic*. A "post-release" pack of 30
+> requests with a deliberately shifted storyline (a wave of non-covered GLP-1 requests, hastily
+> filed requests that a document re-request can't fix) is replayed through the frozen graph, and a
+> pure domain function computes **PSI** (Population Stability Index) over the branch distribution —
+> reference (`base`: 73/13/13) vs primary (`post`: 37/27/37). `make drift-push` lands both
+> distributions and the PSI gauge in Prometheus (same Pushgateway rails as iter 4), a provisioned
+> Grafana dashboard shows the two packs side by side, and an alert rule fires at the **industry
+> threshold PSI > 0.2 — no demo squeezing** (actual PSI ≈ 0.583). `make drift-verify` proves it
+> *from the store* (Prometheus + Grafana APIs). No new tools: the earlier Phoenix plan was dropped
+> after its Inferences drift feature turned out in-process-only and removed in v14 (see ROADMAP
+> notes №5). Iter 4's guardrails (`make budget-demo`/`make slo-verify`), iter 3's Langfuse
+> attribution, iter 2's CI path-assertion gate, and iter 1's golden-set in MLflow still stand. The
+> quickstart heading names the last iteration it actually covers, as in the sibling projects.
 
 ## The object of measurement
 
@@ -43,12 +42,12 @@ Fifth in the series, and deliberately **not a new axis of tools**: policywise-li
 architecture + RAG (LangGraph), dossier-lite covers multi-agent orchestration, sentiment-mlops
 covers classic supervised MLOps, triagewise-lite covers single-call LLMOps. authwise-lite
 reuses their stack wholesale — the branching-graph pattern, LiteLLM, and cassettes from
-`policywise-lite`; MLflow, promptfoo/DeepEval, OTel, Langfuse, and Phoenix from
+`policywise-lite`; MLflow, promptfoo/DeepEval, OTel, and Langfuse from
 `triagewise-lite` — and applies it to the one thing none of them measures: **the trajectory of
 a multi-step agent, not just the answer it gives**. The single deliberate exception is
 Prometheus/Grafana, introduced for per-node SLO alerting and runtime budget controls.
 
-## Quickstart (after iter 4 — agent FinOps guardrails: per-node SLO alerting + runtime budget controls)
+## Quickstart (after iter 5 — path-distribution drift monitoring: PSI + Prometheus/Grafana)
 
 ```bash
 uv sync --extra dev
@@ -90,6 +89,12 @@ make budget-demo                # AW_RUN_BUDGET_USD squeezed → "… → reques
 make slo-up                     # Prometheus (9090) + Pushgateway (9091) + Grafana (3002; admin/lite-password)
 make metrics-push               # RunRecord → Pushgateway: per-node latency/cost + budget-escalation counter
 make slo-verify                 # verify FROM the store: per-node series (Prometheus) + alert rule Firing (Grafana)
+
+# Path-distribution drift monitoring (iter 5) — replay/$0, same slo stack:
+make replay-base                # RunRecord for the reference pack → runs/base.jsonl
+make replay-post                # RunRecord for the shifted "post-release" pack → runs/post.jsonl
+make drift-push                 # branch shares (base vs post) + PSI → Pushgateway; prints the table + PSI=0.583
+make drift-verify               # verify FROM the store: both packs' shares + PSI (Prometheus), alert rule Firing (Grafana)
 make down                       # stop everything (incl. the obs + slo profiles)
 ```
 
@@ -100,6 +105,8 @@ golden-verify` (trajectory golden-set in MLflow), `make obs-up` + `make trace-ba
 `make langfuse-verify` (per-node cost/latency attribution in Langfuse), `make budget-demo` (runtime
 budget controls — squeezed budget routes the retry-loop to `escalate`), `make slo-up` + `make
 metrics-push` + `make slo-verify` (per-node SLO alerting in Prometheus/Grafana),
+`make replay-base`/`make replay-post` + `make drift-push` + `make drift-verify`
+(path-distribution drift: branch shares + PSI, alert at the honest 0.2 threshold),
 `make author-cassettes`/`make author-broken-cassettes` (regenerate the $0 cassettes), `make test`,
 `make fmt`.
 
