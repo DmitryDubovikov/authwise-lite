@@ -1,5 +1,6 @@
-"""Общие HTTP-хелперы verify-скриптов (правило 9: доказательство — запросом к API, не UI).
-stdlib-only, как весь транспортный слой скриптов; используются slo_verify и drift_verify.
+"""Общие хелперы verify-скриптов (правило 9: доказательство — запросом к API, не UI).
+stdlib-only, как весь транспортный слой скриптов; HTTP-часть используется slo_verify и
+drift_verify, вердикт report() — также policy_verify.
 """
 
 import base64

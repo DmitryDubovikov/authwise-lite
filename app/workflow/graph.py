@@ -29,7 +29,12 @@ from app.domain.schemas import (
 from app.llm import tracing
 from app.llm.router import route
 from app.workflow.costs import spent_usd
-from app.workflow.prompts import classify_messages, policy_check_messages
+from app.workflow.prompts import (
+    CODE_BUNDLE,
+    PromptBundle,
+    classify_messages,
+    policy_check_messages,
+)
 
 
 class PAState(TypedDict):
@@ -50,11 +55,15 @@ def _settings(config: RunnableConfig) -> Settings:
     return cast(Settings, config["configurable"]["settings"])
 
 
+def _prompts(config: RunnableConfig) -> PromptBundle:
+    return cast(PromptBundle, config["configurable"]["prompts"])
+
+
 async def classify(state: PAState, config: RunnableConfig) -> dict[str, object]:
     settings = _settings(config)
     reply = await route(
         settings.tier_classify,
-        classify_messages(state["text"]),
+        classify_messages(state["text"], template=_prompts(config).classify),
         request_id=state["request_id"],
         node="classify",
         attempt=1,
@@ -81,7 +90,12 @@ async def policy_check(state: PAState, config: RunnableConfig) -> dict[str, obje
     attempt = state.get("retry_cycles", 0) + 1
     reply = await route(
         settings.tier_policy_check,
-        policy_check_messages(state["text"], state["classification"], state["received"]),
+        policy_check_messages(
+            state["text"],
+            state["classification"],
+            state["received"],
+            template=_prompts(config).policy_check,
+        ),
         request_id=state["request_id"],
         node="policy-check",
         attempt=attempt,
@@ -165,9 +179,16 @@ class PARunResult:
     budget_escalated: bool  # escalate по исчерпанию бюджета рана (iter 4), не ассертится
 
 
-async def run_pa_request(request: PARequest, *, settings: Settings) -> PARunResult:
-    """Boundary workflow-слоя: одна заявка через граф → ответ + PathTrace."""
-    config: RunnableConfig = {"configurable": {"settings": settings}}
+async def run_pa_request(
+    request: PARequest, *, settings: Settings, prompts: PromptBundle | None = None
+) -> PARunResult:
+    """Boundary workflow-слоя: одна заявка через граф → ответ + PathTrace.
+    prompts — alias-загрузка (iter 6): шаблоны из реестра, разрешённые на boundary;
+    None — промпты из кода (дефолт, CI/тесты offline). Фолбэк на CODE_BUNDLE резолвится
+    здесь один раз — единственный владелец дефолта."""
+    config: RunnableConfig = {
+        "configurable": {"settings": settings, "prompts": prompts or CODE_BUNDLE}
+    }
     handler = tracing.langgraph_handler(settings)  # None — трейсинг выключен (дефолт)
     if handler is not None:
         config["callbacks"] = [handler]

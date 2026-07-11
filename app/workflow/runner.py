@@ -14,6 +14,7 @@ from app.domain.path import PathTrace
 from app.domain.schemas import NodeStat, PARequest
 from app.llm import tracing
 from app.workflow.graph import run_pa_request
+from app.workflow.prompts import PromptBundle
 
 
 @dataclass(frozen=True)
@@ -24,9 +25,14 @@ class RunRecord:
     budget_escalated: bool = False  # escalate по исчерпанию бюджета (iter 4) → счётчик метрик
 
 
-async def run_batch(requests: list[PARequest], *, settings: Settings) -> list[RunRecord]:
-    """Прогнать пачку через граф (в replay — $0) → RunRecord на заявку, в порядке пачки."""
-    results = await asyncio.gather(*(run_pa_request(r, settings=settings) for r in requests))
+async def run_batch(
+    requests: list[PARequest], *, settings: Settings, prompts: PromptBundle | None = None
+) -> list[RunRecord]:
+    """Прогнать пачку через граф (в replay — $0) → RunRecord на заявку, в порядке пачки.
+    prompts — alias-загрузка (iter 6), None = промпты из кода."""
+    results = await asyncio.gather(
+        *(run_pa_request(r, settings=settings, prompts=prompts) for r in requests)
+    )
     tracing.flush(settings)  # дожать батч-экспортер Langfuse на границе прогона (no-op без ключей)
     return [
         RunRecord(

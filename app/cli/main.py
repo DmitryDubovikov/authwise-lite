@@ -20,12 +20,25 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
+    prompts = None
+    if settings.routing_policy_alias:
+        # alias-загрузка (iter 6) на boundary; импорт локальный — mlflow тяжёлый и без alias
+        # не нужен (дефолтный путь остаётся offline и быстрым)
+        from app.workflow.policy import describe_pins, load_bundle
+
+        prompts, resolved = load_bundle(
+            settings.routing_policy_alias, tracking_uri=settings.mlflow_tracking_uri
+        )
+        print(
+            f"routing-policy: {resolved.alias} → v{resolved.registered_version} "
+            f"({describe_pins(resolved)})"
+        )
     requests = load_requests(args.fixture)
     if args.request_id is not None:
         requests = [r for r in requests if r.id == args.request_id]
         if not requests:
             raise SystemExit(f"заявка {args.request_id!r} не найдена в {args.fixture}")
-    records = asyncio.run(run_batch(requests, settings=settings))
+    records = asyncio.run(run_batch(requests, settings=settings, prompts=prompts))
     if args.request_id is None:
         # RunRecord JSONL (контракт №3) — только полный прогон: дебаг одной заявки через --id
         # не должен молча затирать батч-артефакт, который читают metrics-push и drift-push

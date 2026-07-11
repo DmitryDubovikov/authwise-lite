@@ -6,20 +6,23 @@ fixture; **path-level measurement is the product** — trajectory golden-set, CI
 gates, per-node cost/latency SLO, and path-distribution drift monitoring. See `CLAUDE.md`
 (constitution) and `ROADMAP.md` (iteration backbone).
 
-> **Status: iteration 5 closed** — **path-distribution drift monitoring (PSI, Prometheus/Grafana)**.
-> The gates watch the *agent*; this iteration watches the *traffic*. A "post-release" pack of 30
-> requests with a deliberately shifted storyline (a wave of non-covered GLP-1 requests, hastily
-> filed requests that a document re-request can't fix) is replayed through the frozen graph, and a
-> pure domain function computes **PSI** (Population Stability Index) over the branch distribution —
-> reference (`base`: 73/13/13) vs primary (`post`: 37/27/37). `make drift-push` lands both
-> distributions and the PSI gauge in Prometheus (same Pushgateway rails as iter 4), a provisioned
-> Grafana dashboard shows the two packs side by side, and an alert rule fires at the **industry
-> threshold PSI > 0.2 — no demo squeezing** (actual PSI ≈ 0.583). `make drift-verify` proves it
-> *from the store* (Prometheus + Grafana APIs). No new tools: the earlier Phoenix plan was dropped
-> after its Inferences drift feature turned out in-process-only and removed in v14 (see ROADMAP
-> notes №5). Iter 4's guardrails (`make budget-demo`/`make slo-verify`), iter 3's Langfuse
-> attribution, iter 2's CI path-assertion gate, and iter 1's golden-set in MLflow still stand. The
-> quickstart heading names the last iteration it actually covers, as in the sibling projects.
+> **Status: iteration 6 closed** — **routing-policy as a versioned artifact (pinning per-node
+> prompt versions)**. Earlier iterations put the agent's *path* under control; this one puts the
+> *configuration that determines the path* — the two LLM-node prompts — into MLflow's Prompt
+> Registry as versioned objects, with a **routing-policy** on top (an external LoggedModel
+> registered into the Model Registry) that **pins the exact version of each prompt**. Two policy
+> versions carry aliases: `champion` (v1 = the code prompts) and `challenger` (v2 = a
+> deliberately broken rubber-stamp policy-check, materialising the iter-2 regression storyline).
+> `make policy-seed` is idempotent (a re-run neither grows versions nor rolls back a swap),
+> `make policy-verify` proves the pins and aliases *from the store* via the MLflow API (rule 9),
+> `make policy-swap` atomically exchanges the two aliases (a re-run restores the original), and
+> `AW_ROUTING_POLICY_ALIAS=champion make replay-base-champion` proves the pinned templates
+> actually reach the graph nodes from the registry without changing any paths (replay/$0). By
+> default the agent still takes its prompts from code — CI, tests, and the path-gate stay
+> offline; alias-loading is opt-in. No new tools: this is stock MLflow 3, the same store that
+> holds the golden-set since iter 1. Iter 5's drift monitoring, iter 4's guardrails, iter 3's
+> Langfuse attribution, iter 2's CI path-assertion gate, and iter 1's golden-set all still stand.
+> The quickstart heading names the last iteration it actually covers, as in the sibling projects.
 
 ## The object of measurement
 
@@ -47,7 +50,7 @@ reuses their stack wholesale — the branching-graph pattern, LiteLLM, and casse
 a multi-step agent, not just the answer it gives**. The single deliberate exception is
 Prometheus/Grafana, introduced for per-node SLO alerting and runtime budget controls.
 
-## Quickstart (after iter 5 — path-distribution drift monitoring: PSI + Prometheus/Grafana)
+## Quickstart (after iter 6 — routing-policy as a versioned artifact: pinning per-node prompt versions)
 
 ```bash
 uv sync --extra dev
@@ -96,6 +99,14 @@ make replay-post                # RunRecord for the shifted "post-release" pack 
 make drift-push                 # branch shares (base vs post) + PSI → Pushgateway; prints the table + PSI=0.583
 make drift-verify               # verify FROM the store: both packs' shares + PSI (Prometheus), alert rule Firing (Grafana)
 make down                       # stop everything (incl. the obs + slo profiles)
+
+# Routing-policy as a versioned artifact (iter 6) — MLflow only, offline/$0:
+make up                         # MLflow at localhost:5051 (same store as the golden-set)
+make policy-seed                # prompts → Prompt Registry, routing-policy versions pinning them, champion/challenger aliases (idempotent)
+make policy-verify              # verify FROM the store: alias → version, pins (params ↔ linkedPrompts), templates (MLflow API)
+make policy-swap                # atomically exchange champion ↔ challenger (a re-run restores the original)
+make replay-base-champion       # alias-loading: pinned templates from the registry reach the graph; paths unchanged vs code prompts
+make down                       # stop MLflow
 ```
 
 Make targets: `make check` (lint+types+tests, includes the path-gate), `make smoke` (run the smoke
@@ -107,6 +118,9 @@ budget controls — squeezed budget routes the retry-loop to `escalate`), `make 
 metrics-push` + `make slo-verify` (per-node SLO alerting in Prometheus/Grafana),
 `make replay-base`/`make replay-post` + `make drift-push` + `make drift-verify`
 (path-distribution drift: branch shares + PSI, alert at the honest 0.2 threshold),
+`make policy-seed` + `make policy-verify` + `make policy-swap` + `make replay-base-champion`
+(routing-policy as a versioned artifact — prompts in the Prompt Registry, a policy version pinning
+them, champion/challenger aliases, atomic swap),
 `make author-cassettes`/`make author-broken-cassettes` (regenerate the $0 cassettes), `make test`,
 `make fmt`.
 

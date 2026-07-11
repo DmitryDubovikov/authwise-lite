@@ -1,4 +1,7 @@
-"""Промпты LLM-нод. До iter 6 живут в коде; регистрация в Prompt Registry — скоуп iter 6."""
+"""Промпты LLM-нод. Дефолт — из кода (CI/тесты offline); эти же тексты сид iter 6 регистрирует
+в Prompt Registry, alias-загрузка подставляет запиненные версии из реестра на boundary."""
+
+from dataclasses import dataclass
 
 from app.domain.schemas import Classification
 
@@ -30,18 +33,36 @@ PA request:
 {received_block}"""
 
 
-def classify_messages(text: str) -> list[dict[str, str]]:
-    return [{"role": "user", "content": CLASSIFY_PROMPT.format(text=text)}]
+@dataclass(frozen=True)
+class PromptBundle:
+    """Шаблоны обеих LLM-нод одним объектом: дефолт — из кода; alias-загрузка (iter 6)
+    подставляет версии из Prompt Registry на boundary, ноды графа разницы не видят."""
+
+    classify: str
+    policy_check: str
+
+
+CODE_BUNDLE = PromptBundle(classify=CLASSIFY_PROMPT, policy_check=POLICY_CHECK_PROMPT)
+
+
+# template — обязательный: единственный владелец дефолта «промпты из кода» — run_pa_request
+# (CODE_BUNDLE на boundary), молчаливого фолбэка мимо бандла нет
+def classify_messages(text: str, *, template: str) -> list[dict[str, str]]:
+    return [{"role": "user", "content": template.format(text=text)}]
 
 
 def policy_check_messages(
-    text: str, classification: Classification, received: list[str]
+    text: str,
+    classification: Classification,
+    received: list[str],
+    *,
+    template: str,
 ) -> list[dict[str, str]]:
     received_block = ""
     if received:
         docs = "\n".join(f"- {doc}" for doc in received)
         received_block = f"\nAdditional documents received after request-info:\n{docs}\n"
-    content = POLICY_CHECK_PROMPT.format(
+    content = template.format(
         case_type=classification.case_type,
         urgency=classification.urgency,
         text=text,

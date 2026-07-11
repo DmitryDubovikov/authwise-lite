@@ -1,4 +1,4 @@
-.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up slo-up metrics-push budget-demo slo-verify record-base replay-base trace-base golden-upload golden-verify langfuse-verify record-post replay-post drift-push drift-verify
+.PHONY: check test fmt smoke author-cassettes author-broken-cassettes path-gate path-gate-broken up down obs-up slo-up metrics-push budget-demo slo-verify record-base replay-base trace-base golden-upload golden-verify langfuse-verify record-post replay-post drift-push drift-verify policy-seed policy-swap policy-verify replay-base-champion
 
 # pk-aw/sk-aw — детерминированный dev-сид Langfuse (LANGFUSE_INIT_* в docker-compose.yml), не секрет
 LANGFUSE_KEYS = AW_LANGFUSE_PUBLIC_KEY=pk-aw AW_LANGFUSE_SECRET_KEY=sk-aw
@@ -60,6 +60,18 @@ drift-push: ## path-drift: доли веток base (reference) vs post (primary
 
 drift-verify: ## verify the store (правило 9): доли веток и PSI из Prometheus API + alert rule Firing из Grafana API
 	uv run python -m scripts.drift_verify
+
+policy-seed: ## routing-policy в MLflow (iter 6): промпты + версии с пинами + alias champion/challenger (идемпотентно; нужен up)
+	uv run python -m scripts.policy_seed
+
+policy-swap: ## ручной swap alias champion ↔ challenger на pa-routing-policy (повторный — вернёт исходное)
+	uv run python -m scripts.policy_swap
+
+policy-verify: ## verify the store (правило 9): alias, пины и шаблоны routing-policy запросами к MLflow API
+	uv run python -m scripts.policy_verify
+
+replay-base-champion: ## alias-загрузка (iter 6): replay базовой пачки с промптами champion из реестра ($$0; нужны up и policy-seed)
+	AW_CASSETTE_SET=base AW_ROUTING_POLICY_ALIAS=champion uv run python -m app.cli fixtures/requests-base.jsonl
 
 budget-demo: ## FinOps guardrail: ужатый бюджет рана обрывает retry-loop → escalate [budget] (replay, $$0)
 	AW_CASSETTE_SET=base AW_RUN_BUDGET_USD=0.00008 uv run python -m app.cli fixtures/requests-base.jsonl

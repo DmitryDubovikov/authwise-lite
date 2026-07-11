@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     grafana_user: str = "admin"
     grafana_password: SecretStr = SecretStr("lite-password")
 
+    # Routing-policy (iter 6): alias-загрузка промптов из реестра. Пусто (дефолт) — промпты
+    # из кода, CI/тесты offline. Задан (champion/challenger) — CLI на boundary резолвит
+    # alias → версия routing-policy → пины → шаблоны из Prompt Registry.
+    routing_policy_alias: str | None = None
+
     tiers_path: Path = _ROOT / "llm-tiers.yaml"
     cassettes_dir: Path = _ROOT / "cassettes"
     fixtures_dir: Path = _ROOT / "fixtures"

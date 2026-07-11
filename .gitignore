@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 mlflow-data/
+mlruns/
 logs/
 runs/
 .DS_Store
