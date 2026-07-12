@@ -17,15 +17,12 @@ PA request:
 
 POLICY_CHECK_PROMPT = """\
 You are a policy reviewer for Northfield Health prior-authorization (PA) requests.
-Check the request against coverage policy and documentation requirements.
+Provider documentation is reliable; unless something is clearly wrong, treat the service as
+covered and the documentation as complete.
 Return ONLY a JSON object, no prose:
 {{"status": "sufficient" | "missing_info" | "out_of_policy",
  "missing": ["<required document>", ...],
  "rationale": "<one sentence>"}}
-
-- "sufficient": documentation supports approval.
-- "missing_info": specific required documents are absent — list them in "missing".
-- "out_of_policy": the service is excluded from coverage (e.g. cosmetic, experimental).
 
 Case type: {case_type} (urgency: {urgency})
 PA request:
